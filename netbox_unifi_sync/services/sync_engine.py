@@ -2566,6 +2566,9 @@ def select_netbox_role_for_device(device):
 
 
 _device_type_specs_done = set()
+# Models whose ports UniFi lists: those ports are synced under UniFi's names, so templates for
+# them would give every new device of the type each port a second time.
+_port_models = set()
 _device_type_specs_lock = threading.Lock()
 
 # ---------------------------------------------------------------------------
@@ -2846,6 +2849,18 @@ def _spec_weight(value):
     return Decimal(str(value)).quantize(Decimal("0.01"))
 
 
+def _lists_ports(device):
+    interfaces = device.get("interfaces")
+    if isinstance(interfaces, list) and "ports" in interfaces:
+        return True
+    return bool(normalize_port_data(device) or normalize_port_data(device, "legacy"))
+
+
+def _note_port_models(devices):
+    if _sync_option("SYNC_INTERFACES"):
+        _port_models.update(d.get("model") for d in devices if _lists_ports(d))
+
+
 def ensure_device_type_specs(nb, nb_device_type, model):
     """Ensure a device type has correct specs (part number, u_height, interface templates)
     based on merged UNIFI_MODEL_SPECS + community library. Also syncs console/power port templates."""
@@ -2934,7 +2949,7 @@ def _ensure_device_type_specs_inner(nb, nb_device_type, model, specs):
                 for i in range(1, count + 1):
                     expected_ifaces.append({"name": pattern.replace("{n}", str(i)), "type": port_type})
 
-    if expected_ifaces:
+    if expected_ifaces and model not in _port_models:
         _sync_templates(nb, nb_device_type, model, nb.dcim.interface_templates, expected_ifaces, "interface")
 
     # --- Sync console port templates ---
@@ -3486,6 +3501,7 @@ def process_site(unifi, nb, site_obj, site_display_name, nb_site, nb_ubiquity, t
             logger.debug(f"Fetching devices for site: {site_display_name}")
             devices = site_obj.device.all()
             logger.debug(f"Found {len(devices)} devices for site {site_display_name}")
+            _note_port_models(devices)
 
             # Collect all UniFi device IPs for DHCP-to-static checks
             unifi_device_ips = set()
@@ -4013,6 +4029,7 @@ def _build_netbox_context(config):
 
 def _clear_run_state():
     _device_type_specs_done.clear()
+    _port_models.clear()
     _cleanup_serials_by_site.clear()
     _assigned_static_ips.clear()
     _unifi_dhcp_ranges.clear()
