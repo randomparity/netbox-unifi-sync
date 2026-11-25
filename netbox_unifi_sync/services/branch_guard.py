@@ -9,8 +9,10 @@ branch's schema is gone. So a run holds the branch:
   or migrate a branch whose lock is taken, and a second run of the branch is refused.
 - Every statement on the branch's connection, in any thread, runs in a transaction that first
   locks a table of the branch's schema. If the schema is gone, the statement is not run; while
-  the transaction holds that lock, the schema cannot be dropped. This holds even for a drop that
-  bypasses the receivers, and if the advisory lock's connection is lost.
+  the transaction holds that lock, the schema cannot be dropped. This holds even for a drop of the
+  schema that bypasses the receivers, and if the advisory lock's connection is lost.
+- A single table of the branch dropped by hand is not locked: until the run ends, statements on it
+  reach main's table. So a run fails if any table the branch had at its start is gone at its end.
 
 Anything that goes wrong after the start makes the run fail when it ends. A killed run's
 connections close, and PostgreSQL releases its locks.
@@ -99,6 +101,7 @@ class _Hold:
         self._mutex = threading.Lock()
         self._connection = None
         self._pid = None
+        self.tables: set[str] = set()
 
     def acquire(self) -> None:
         from django.db import DEFAULT_DB_ALIAS, connections
@@ -157,14 +160,29 @@ class _Hold:
             self.lock_schema(connection)
             return execute(sql, params, many, context)
 
+    def branch_tables(self) -> set[str]:
+        with self._mutex:
+            with self._connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT tablename FROM pg_tables WHERE schemaname = %s",
+                    [self.branch.schema_name],
+                )
+                return {row[0] for row in cursor.fetchall()}
+
     def verify(self) -> None:
         if self.lost:
             raise BranchLostError(f"Sync failed: {self.lost}")
         try:
             self._check_lock()
             require_active_branch()
+            missing = sorted(self.tables - self.branch_tables())
         except Exception as exc:
             raise BranchLostError(f"Sync failed: the branch changed during the run ({exc})") from exc
+        if missing:
+            raise BranchLostError(
+                f"Sync failed: branch {self.branch.name!r} no longer has {missing}; its statements "
+                "on them went to main"
+            )
 
 
 def _failed_transaction(connection) -> bool:
@@ -218,6 +236,7 @@ def hold_branch():
         token = _held.set(hold)
         try:
             require_active_branch()
+            hold.tables = hold.branch_tables()
             yield hold
             hold.verify()
         finally:

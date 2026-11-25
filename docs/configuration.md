@@ -188,9 +188,11 @@ code that activates the branch.
 A run holds its branch until it ends. Deleting, archiving, merging, reverting, syncing or
 migrating the branch meanwhile is refused at once with "A UniFi sync is running in branch ...",
 and a second run of it, or a run during one of those actions, is refused too. Every statement of
-the run locks a table of the branch's schema in its own transaction, so it never reaches main: a
-schema dropped by other means fails the run instead. A killed run's locks end with its
-connections. The engine's inventory adapter refuses all access outside a run.
+the run locks a table of the branch's schema in its own transaction, so a dropped schema stops the
+statement instead of letting it reach main, and fails the run. A single table of the branch dropped
+by hand is not locked: statements on it reach main's table until the run ends, and the run then
+fails because the table is gone. A killed run's locks end with its connections. The engine's
+inventory adapter refuses all access outside a run.
 
 ### Safe settings
 

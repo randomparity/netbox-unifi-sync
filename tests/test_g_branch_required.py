@@ -174,6 +174,7 @@ class FakeHolder:
 
     def __init__(self, taken=True, pid=11):
         self.taken, self.pid, self.closed, self.sql = taken, pid, False, []
+        self.tables = ["core_objectchange", "dcim_device", "dcim_interface"]
 
     def copy(self):
         return self
@@ -191,6 +192,9 @@ class FakeHolder:
 
             def fetchone(self):
                 return self.row
+
+            def fetchall(self):
+                return [(table,) for table in holder.tables]
         return nullcontext(Cursor())
 
     def close(self):
@@ -431,3 +435,11 @@ def test_the_plugin_connects_them_when_branching_is_installed():
 @pytest.fixture
 def real_inventory_guard():
     return branch_guard.require_held
+
+
+def test_a_branch_table_dropped_during_the_run_fails_it(held):
+    """A table dropped alone resolves to main's: the run must not end clean."""
+    with pytest.raises(branch_guard.BranchLostError, match=r"no longer has \['dcim_interface'\]"):
+        with branch_guard.hold_branch():
+            held.holder.tables.remove("dcim_interface")
+    assert any("pg_tables" in sql for sql in held.holder.sql)
