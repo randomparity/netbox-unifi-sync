@@ -276,8 +276,8 @@ def test_controller_connection(controller: UnifiController, settings: GlobalSync
     }
 
 
+@branch_guard.in_branch
 def run_sync(*, dry_run: bool, cleanup_requested: bool, requested_by_id: int | None = None, controller_ids: Iterable[int] | None = None) -> dict[str, Any]:
-    branch_guard.require_active_branch()
     settings = get_or_create_global_settings()
     if not settings.enabled:
         return {

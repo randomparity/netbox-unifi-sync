@@ -17,14 +17,15 @@ from netbox_unifi_sync.services.permissions import can_queue_sync, can_run_clean
 ROOT = Path(__file__).resolve().parents[1] / 'netbox_unifi_sync'
 
 
-def _load_function(path, name, namespace, class_name=None):
+def _load_function(path, name, namespace, class_name=None, keep_decorators=False):
     """Exercise the real function body while injecting framework dependencies."""
     tree = ast.parse((ROOT / path).read_text())
     nodes = tree.body
     if class_name:
         nodes = next(n for n in nodes if isinstance(n, ast.ClassDef) and n.name == class_name).body
     function = next(n for n in nodes if isinstance(n, ast.FunctionDef) and n.name == name)
-    function.decorator_list = []
+    if not keep_decorators:
+        function.decorator_list = []
     module = ast.Module(body=[function], type_ignores=[])
     exec(compile(module, str(ROOT / path), 'exec'), namespace)
     return namespace[name]

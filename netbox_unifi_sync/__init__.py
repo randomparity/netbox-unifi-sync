@@ -27,6 +27,12 @@ class NetBoxUnifiSyncConfig(PluginConfig):
     def ready(self):
         super().ready()
         from . import jobs  # noqa: F401
+        from django.apps import apps
+
+        if apps.is_installed("netbox_branching"):
+            from .services.branch_guard import connect_branch_actions
+
+            connect_branch_actions()
         try:
             from netbox.models.features import register_models
             from .models import (

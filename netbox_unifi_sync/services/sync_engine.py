@@ -4047,6 +4047,7 @@ def _clear_run_state():
         _static_prefix_locks.clear()
 
 
+@branch_guard.in_branch
 def run_sync_once(config=None, clear_state=False):
     """
     Run one UniFi -> NetBox sync cycle.
@@ -4055,7 +4056,6 @@ def run_sync_once(config=None, clear_state=False):
     :param clear_state: Whether to clear per-run caches before processing.
     :return: Dict with run metadata.
     """
-    branch_guard.require_active_branch()
     safe_settings.require_safe_environment({
         "MAX_CONTROLLER_THREADS": MAX_CONTROLLER_THREADS,
         "MAX_SITE_THREADS": MAX_SITE_THREADS,

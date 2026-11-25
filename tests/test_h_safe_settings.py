@@ -1,5 +1,6 @@
 """Unset, every setting is the safe one; set otherwise, a sync is refused."""
 import ast
+from contextlib import nullcontext
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -175,7 +176,7 @@ def test_refuses_requested_cleanup():
 
 
 def test_engine_refuses_before_it_reads_configuration(unset, monkeypatch):
-    monkeypatch.setattr(branch_guard, "require_active_branch", lambda: None)
+    monkeypatch.setattr(branch_guard, "hold_branch", nullcontext)
     monkeypatch.setenv("SYNC_INTERFACE_DELETE", "true")
     load = Mock()
     monkeypatch.setattr(sync_engine, "_load_runtime_or_exit", load)
@@ -187,7 +188,7 @@ def test_engine_refuses_before_it_reads_configuration(unset, monkeypatch):
 @pytest.mark.parametrize("name", ["MAX_CONTROLLER_THREADS", "MAX_SITE_THREADS",
                                   "MAX_DEVICE_THREADS"])
 def test_engine_refuses_its_own_thread_counts(unset, monkeypatch, name):
-    monkeypatch.setattr(branch_guard, "require_active_branch", lambda: None)
+    monkeypatch.setattr(branch_guard, "hold_branch", nullcontext)
     monkeypatch.setattr(sync_engine, name, 2)
     monkeypatch.setattr(sync_engine, "_load_runtime_or_exit", Mock(side_effect=AssertionError))
     with pytest.raises(UnsafeSettingsError, match=f"{name} must be 1"):
@@ -195,7 +196,7 @@ def test_engine_refuses_its_own_thread_counts(unset, monkeypatch, name):
 
 
 def test_service_passes_the_settings_to_the_engine_check(unset, monkeypatch):
-    monkeypatch.setattr(branch_guard, "require_active_branch", lambda: None)
+    monkeypatch.setattr(branch_guard, "hold_branch", nullcontext)
     monkeypatch.setattr(sync_engine, "_load_runtime_or_exit", Mock(side_effect=AssertionError))
     with pytest.raises(UnsafeSettingsError, match="SYNC_CLIENT_IPS must be off"):
         sync_service.execute_sync(config_overrides={

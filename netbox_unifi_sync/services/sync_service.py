@@ -144,6 +144,7 @@ def _run_preflight(plugin_settings: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+@branch_guard.in_branch
 def execute_sync(
     *,
     dry_run: bool = False,
@@ -151,7 +152,6 @@ def execute_sync(
     requested_by_id: int | None = None,
 ) -> dict[str, Any]:
     """Execute one sync cycle or dry-run preflight using current plugin settings."""
-    branch_guard.require_active_branch()
     if isinstance(config_overrides, dict):
         # In plugin runtime, UI/DB settings are passed as overrides.
         # Do not merge PLUGINS_CONFIG here; keep runtime source-of-truth in DB.

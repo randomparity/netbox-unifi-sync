@@ -1,3 +1,5 @@
+from contextlib import nullcontext
+
 from netbox_unifi_sync.services import sync_service
 
 
@@ -5,7 +7,7 @@ def test_execute_sync_with_overrides_does_not_load_plugins_config(monkeypatch):
     def _forbid_plugins_config(*args, **kwargs):
         raise AssertionError("get_plugin_settings must not be called when config_overrides is provided")
 
-    monkeypatch.setattr(sync_service.branch_guard, "require_active_branch", lambda: None)
+    monkeypatch.setattr(sync_service.branch_guard, "hold_branch", nullcontext)
     monkeypatch.setattr(sync_service, "get_plugin_settings", _forbid_plugins_config)
     monkeypatch.setattr(
         sync_service,

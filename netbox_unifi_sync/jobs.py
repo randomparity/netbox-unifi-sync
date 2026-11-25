@@ -51,8 +51,8 @@ def _resolve_user(user_id: Any):
         return None
 
 
+@branch_guard.in_branch
 def _run_sync_job(*, dry_run: bool, cleanup_requested: bool, requested_by_id: int | None, trigger: str, job_id: str):
-    branch_guard.require_active_branch()
     run = SyncRun.objects.create(
         status="pending",
         dry_run=bool(dry_run),
