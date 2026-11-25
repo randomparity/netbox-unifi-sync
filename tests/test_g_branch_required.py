@@ -148,3 +148,17 @@ def test_schedule_refuses_before_it_marks_the_tick(refused):
     with pytest.raises(BranchRequiredError):
         run(SimpleNamespace(job=None))
     tick.assert_not_called()
+
+
+def test_job_logs_why_it_was_refused():
+    class JobFailed(Exception):
+        pass
+
+    run = _load_function("jobs.py", "run", {
+        "_run_sync_job": Mock(side_effect=BranchRequiredError("refused")),
+        "SyncConfigurationError": BranchRequiredError, "JobFailed": JobFailed,
+    }, class_name="UnifiSyncJob")
+    job = SimpleNamespace(logger=Mock(), job=None)
+    with pytest.raises(JobFailed):
+        run(job)
+    job.logger.error.assert_called_once_with("Configuration error: refused")

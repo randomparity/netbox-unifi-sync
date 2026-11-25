@@ -117,6 +117,7 @@ class UnifiSyncJob(JobRunner):
                 job_id=str(getattr(self.job, "id", "") or getattr(self.job, "pk", "")),
             )
         except SyncConfigurationError as exc:
+            self.logger.error(f"Configuration error: {exc}")
             raise JobFailed(f"Configuration error: {exc}") from exc
         except Exception as exc:
             raise JobFailed(f"Sync failed: {exc}") from exc
