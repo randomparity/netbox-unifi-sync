@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
+
 from netbox_unifi_sync.services import sync_engine as engine
 
 
@@ -15,6 +17,35 @@ def test_keeps_vlan_name(monkeypatch):
     engine._vlan_cache.clear()
     assert vlan.name == "My IoT"
     vlan.save.assert_not_called()
+
+
+def _sync_vlan(monkeypatch, keep, status, enabled, name="IoT"):
+    monkeypatch.setenv("SYNC_KEEP_EXISTING", keep)
+    engine._vlan_cache.clear()
+    vlan = SimpleNamespace(name=name, status=status, save=Mock())
+    nb = SimpleNamespace(ipam=SimpleNamespace(vlans=Mock(), vlan_groups=Mock()))
+    nb.ipam.vlans.get.return_value = vlan
+    site = SimpleNamespace(network_conf=SimpleNamespace(
+        all=lambda: [{"name": "IoT", "vlanId": 20, "enabled": enabled}]))
+    engine.sync_site_vlans(nb, site, SimpleNamespace(id=1, name="S"), SimpleNamespace(id=1))
+    engine._vlan_cache.clear()
+    return vlan
+
+
+@pytest.mark.parametrize("status, enabled", [
+    ("reserved", True), ("deprecated", True), ("deprecated", False), ("active", False),
+    (SimpleNamespace(value="reserved"), True),
+])
+def test_keeps_vlan_status(monkeypatch, status, enabled):
+    vlan = _sync_vlan(monkeypatch, "true", status, enabled)
+    assert vlan.status is status
+    vlan.save.assert_not_called()
+
+
+def test_sets_vlan_status_when_not_keeping(monkeypatch):
+    vlan = _sync_vlan(monkeypatch, "false", "reserved", True)
+    assert vlan.status == "active"
+    vlan.save.assert_called_once()
 
 
 def test_keeps_device_fields(monkeypatch):

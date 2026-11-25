@@ -1035,6 +1035,7 @@ def sync_site_vlans(nb, site_obj, nb_site, tenant):
             current_status = existing.status.value if hasattr(existing.status, "value") else str(existing.status)
             if _keep_existing():
                 net_name = existing.name
+                desired_status = current_status
             changed = existing.name != net_name or current_status != desired_status
             if changed:
                 try:

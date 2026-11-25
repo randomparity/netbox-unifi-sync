@@ -197,6 +197,9 @@ The engine also refuses `SYNC_KEEP_EXISTING` or `SYNC_CABLES_STRICT` off, and
 `SYNC_OFFLINE_CABLE_DELETE`, `SYNC_INTERFACE_DELETE` or `SYNC_LIVE_READINGS` on. Unset, each has
 its safe value.
 
+With `SYNC_KEEP_EXISTING`, the name and status of a VLAN that exists are kept, also when UniFi
+disables its network.
+
 ### Scheduling
 
 - `schedule_enabled`
