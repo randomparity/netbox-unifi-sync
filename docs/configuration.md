@@ -178,6 +178,12 @@ Stale `running` sync runs older than the runtime reconciliation threshold are
 marked failed before new status data is shown. This prevents interrupted worker
 processes from leaving the dashboard permanently stuck in a running state.
 
+### Branch required
+
+Every sync, dry runs included, is refused unless a netbox-branching branch is active and ready, its
+schema exists, and inventory reads and writes go to it. Background jobs and the schedule have no
+branch, so they are refused too. Start a sync from code that activates the branch.
+
 ### Scheduling
 
 - `schedule_enabled`

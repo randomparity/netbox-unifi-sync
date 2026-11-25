@@ -14,6 +14,7 @@ from ..configuration import (
     sanitize_plugin_settings,
     validate_plugin_settings,
 )
+from . import branch_guard
 from .auth import UnifiAuthSettings
 from .mapping import format_result_summary
 
@@ -150,6 +151,7 @@ def execute_sync(
     requested_by_id: int | None = None,
 ) -> dict[str, Any]:
     """Execute one sync cycle or dry-run preflight using current plugin settings."""
+    branch_guard.require_active_branch()
     if isinstance(config_overrides, dict):
         # In plugin runtime, UI/DB settings are passed as overrides.
         # Do not merge PLUGINS_CONFIG here; keep runtime source-of-truth in DB.

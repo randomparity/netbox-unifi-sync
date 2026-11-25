@@ -13,6 +13,7 @@ import ipaddress
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib3.exceptions import InsecureRequestWarning
+from . import branch_guard
 # Import the unifi module instead of defining the Unifi class
 from .sync import ipam as ipam_helpers
 from .sync import vrf as vrf_helpers
@@ -4047,6 +4048,7 @@ def run_sync_once(config=None, clear_state=False):
     :param clear_state: Whether to clear per-run caches before processing.
     :return: Dict with run metadata.
     """
+    branch_guard.require_active_branch()
     config = config or _load_runtime_or_exit()
     context = _build_netbox_context(config)
     if clear_state:

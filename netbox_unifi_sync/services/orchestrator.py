@@ -15,6 +15,7 @@ from ..models import (
     SiteMapping,
     UnifiController,
 )
+from . import branch_guard
 from .audit import sanitize_error
 from .runtime import auth_signature, redact_runtime, to_controller_runtime
 from ._validation import SyncConfigurationError, validate_runtime_config as _validate_runtime_config
@@ -273,6 +274,7 @@ def test_controller_connection(controller: UnifiController, settings: GlobalSync
 
 
 def run_sync(*, dry_run: bool, cleanup_requested: bool, requested_by_id: int | None = None, controller_ids: Iterable[int] | None = None) -> dict[str, Any]:
+    branch_guard.require_active_branch()
     settings = get_or_create_global_settings()
     if not settings.enabled:
         return {

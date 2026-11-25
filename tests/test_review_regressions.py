@@ -113,7 +113,7 @@ def test_enqueue_enforces_sync_and_cleanup_permissions(permissions, cleanup, all
     user = SimpleNamespace(pk=7, has_perm=lambda permission: permission in permissions)
     boundary = _load_function('jobs.py', 'enqueue_sync', {
         'can_queue_sync': can_queue_sync, 'can_run_cleanup': can_run_cleanup,
-        'PermissionDenied': PermissionError,
+        'PermissionDenied': PermissionError, 'branch_guard': Mock(),
     }, class_name='UnifiSyncJob')
     if allowed:
         assert boundary(cls, user=user, cleanup_requested=cleanup) == 'queued'
@@ -172,7 +172,7 @@ def test_controllers_share_execution_only_when_site_mappings_match(same_mapping,
         '_collect_site_mappings': mappings,
         '_validate_runtime_config': validate_runtime_config,
         '_build_override': lambda settings, rows, site_mappings, **kwargs: site_mappings,
-        'legacy_execute_sync': execute,
+        'legacy_execute_sync': execute, 'branch_guard': Mock(),
     })
     result = run(dry_run=False, cleanup_requested=True)
     assert execute.call_count == expected_groups

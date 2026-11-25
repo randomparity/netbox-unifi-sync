@@ -11,6 +11,7 @@ from netbox.context import current_request
 from netbox.jobs import JobRunner, system_job
 
 from .models import SyncRun
+from .services import branch_guard
 from .services.audit import record_event, sanitize_error
 from .services.orchestrator import (
     SyncConfigurationError,
@@ -51,6 +52,7 @@ def _resolve_user(user_id: Any):
 
 
 def _run_sync_job(*, dry_run: bool, cleanup_requested: bool, requested_by_id: int | None, trigger: str, job_id: str):
+    branch_guard.require_active_branch()
     run = SyncRun.objects.create(
         status="pending",
         dry_run=bool(dry_run),
@@ -132,6 +134,7 @@ class UnifiSyncJob(JobRunner):
             raise PermissionDenied(
                 "Missing permission: netbox_unifi_sync.run_cleanup"
             )
+        branch_guard.require_active_branch()
         kwargs = {
             "dry_run": bool(dry_run),
             "cleanup_requested": bool(cleanup_requested),
@@ -153,6 +156,7 @@ class UnifiSyncSchedulerJob(JobRunner):
         if not scheduler_due(settings):
             return {"status": "skipped", "reason": "interval not due"}
 
+        branch_guard.require_active_branch()
         mark_scheduler_tick()
         return _run_sync_job(
             dry_run=bool(settings.dry_run_default),
