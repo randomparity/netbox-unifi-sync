@@ -686,7 +686,7 @@ def _sync_live_readings():
     device and client even when nothing about the network changed. They are off
     unless SYNC_LIVE_READINGS is set, and a sync is refused with them on.
     """
-    return os.getenv("SYNC_LIVE_READINGS", "false").strip().lower() not in ("false", "0", "no", "off")
+    return _sync_option("SYNC_LIVE_READINGS", default=False)
 
 
 def sync_device_custom_fields(nb, nb_device, device):
@@ -1551,7 +1551,7 @@ def sync_client_ips(nb, site_obj, nb_site, tenant):
     """
     import time as _time
 
-    if os.getenv("SYNC_CLIENT_IPS", "false").strip().lower() not in ("true", "1", "yes"):
+    if not _sync_option("SYNC_CLIENT_IPS", default=False):
         return
 
     OFFLINE_THRESHOLD = 86400  # 24 hours
@@ -3453,14 +3453,14 @@ def process_site(unifi, nb, site_obj, site_display_name, nb_site, nb_ubiquity, t
                     logger.warning(f"Failed to sync prefixes for site {site_display_name}: {e}")
 
             # Sync client IPs to NetBox IPAM
-            if os.getenv("SYNC_CLIENT_IPS", "false").strip().lower() in ("true", "1", "yes"):
+            if _sync_option("SYNC_CLIENT_IPS", default=False):
                 try:
                     sync_client_ips(nb, site_obj, nb_site, tenant)
                 except Exception as e:
                     logger.warning(f"Failed to sync client IPs for site {site_display_name}: {e}")
 
             # Auto-discover DHCP ranges from UniFi network configs
-            if os.getenv("DHCP_AUTO_DISCOVER", "false").strip().lower() in ("true", "1", "yes"):
+            if _sync_option("DHCP_AUTO_DISCOVER", default=False):
                 try:
                     site_dhcp_pools = extract_dhcp_pools_from_unifi(site_obj, unifi=unifi)
                     site_dhcp_ranges = []
@@ -3594,7 +3594,7 @@ def process_site(unifi, nb, site_obj, site_display_name, nb_site, nb_ubiquity, t
 
             # Detect stale devices (in NetBox but no longer in UniFi).
             # Status is intentionally left unchanged.
-            if os.getenv("SYNC_STALE_CLEANUP", "false").strip().lower() in ("true", "1", "yes"):
+            if _sync_option("SYNC_STALE_CLEANUP", default=False):
                 try:
                     unifi_serials = set()
                     for d in devices:

@@ -108,31 +108,43 @@ def test_refuses_threads(unset, threads):
         safe_settings.require_safe_environment({"MAX_DEVICE_THREADS": threads})
 
 
-def test_unset_every_switch_the_engine_reads_is_the_safe_one(unset):
-    """Read the defaults out of the engine, so a switch read in a second place is covered too."""
+def test_every_switch_the_engine_reads_is_safe_unset_or_blank(unset):
+    """Read the reads out of the engine, so a switch read in a second place is covered too."""
     text = (PACKAGE / "services" / "sync_engine.py").read_text()
-    found = {}
-    for pattern in (
-        r'_sync_option\("(\w+)"(?:, default=(True|False))?\)',
-        r'_parse_env_bool\(os\.getenv\("(\w+)"\), default=(True|False)\)',
-        r'os\.getenv\("(\w+)", "(true|false)"\)',
-    ):
-        for name, default in re.findall(pattern, text):
-            found.setdefault(name, set()).add((default or "true").lower())
-    for name in ENV_OFF:
-        assert found[name] == {"false"}, name
-    for name in ENV_ON:
-        assert found[name] == {"true"}, name
-    # A read in another form would escape the patterns above.
+    reads = (
+        r'_sync_option\("{}"(?:, default=(True|False))?\)',
+        r'_parse_env_bool\(os\.getenv\("{}"\), default=(True|False)\)',
+    )
     for name in (*ENV_OFF, *ENV_ON):
-        reads = len(re.findall(f'"{name}"', text))
-        matched = sum(
-            len(re.findall(p.replace(r"(\w+)", f"({name})"), text)) for p in (
-                r'_sync_option\("(\w+)"', r'_parse_env_bool\(os\.getenv\("(\w+)"\), default',
-                r'os\.getenv\("(\w+)", "(?:true|false)"',
-            )
-        )
-        assert reads == matched, name
+        defaults = {
+            default or "True" for pattern in reads
+            for default in re.findall(pattern.format(name), text)
+        }
+        safe = "False" if name in ENV_OFF else "True"
+        assert defaults == {safe}, (name, defaults)
+        # Any other read would escape this test, and might take a blank value as on.
+        found = sum(len(re.findall(pattern.format(name), text)) for pattern in reads)
+        assert found == len(re.findall(f'"{name}"', text)), name
+
+
+@pytest.mark.parametrize("blank", ["", " ", "\t"])
+@pytest.mark.parametrize("default", [True, False])
+def test_a_blank_switch_is_its_default(monkeypatch, blank, default):
+    monkeypatch.setenv("SYNC_X", blank)
+    assert sync_engine._sync_option("SYNC_X", default=default) is default
+
+
+@pytest.mark.parametrize("name", (*ENV_OFF, *ENV_ON))
+@pytest.mark.parametrize("blank", ["", " ", "\t"])
+def test_a_blank_switch_is_accepted(unset, monkeypatch, name, blank):
+    monkeypatch.setenv(name, blank)
+    safe_settings.require_safe_environment(ONE)
+
+
+@pytest.mark.parametrize("blank", ["", " "])
+def test_blank_live_readings_are_off(monkeypatch, blank):
+    monkeypatch.setenv("SYNC_LIVE_READINGS", blank)
+    assert sync_engine._sync_live_readings() is False
 
 
 def _saved(**changes):
