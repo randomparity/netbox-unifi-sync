@@ -47,6 +47,11 @@ def _refuse(reason: str):
     )
 
 
+def refuse_background() -> None:
+    """A queued job runs in a worker, which has no branch."""
+    _refuse("a background job runs without a branch")
+
+
 def require_active_branch():
     """Return the active branch if it is ready, has its schema, and inventory goes to it."""
     try:

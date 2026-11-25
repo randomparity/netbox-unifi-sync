@@ -127,13 +127,16 @@ def test_job_function_refuses_before_it_makes_a_run_row(refused, dry_run):
     assert not runs.mock_calls
 
 
-def test_enqueue_refuses(refused):
+@pytest.mark.parametrize("active", [False, True])
+def test_enqueue_refuses(refused, monkeypatch, active):
+    if active:
+        monkeypatch.setattr(branch_guard, "require_active_branch", Mock())
     cls = Mock()
     enqueue = _load_function("jobs.py", "enqueue_sync", {
         "branch_guard": branch_guard, "can_queue_sync": lambda user: True,
         "can_run_cleanup": lambda user: True, "PermissionDenied": PermissionError,
     }, class_name="UnifiSyncJob")
-    with pytest.raises(BranchRequiredError):
+    with pytest.raises(BranchRequiredError, match="background job"):
         enqueue(cls)
     cls.enqueue.assert_not_called()
 

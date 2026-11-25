@@ -182,7 +182,15 @@ processes from leaving the dashboard permanently stuck in a running state.
 
 Every sync, dry runs included, is refused unless a netbox-branching branch is active and ready, its
 schema exists, and inventory reads and writes go to it. Background jobs and the schedule have no
-branch, so they are refused too. Start a sync from code that activates the branch.
+branch, so the dashboard queues none, and a job or schedule that runs is refused. Start a sync from
+code that activates the branch.
+
+A run holds its branch until it ends. Deleting, archiving, merging, reverting, syncing or
+migrating the branch meanwhile is refused at once with "A UniFi sync is running in branch ...",
+and a second run of it, or a run during one of those actions, is refused too. Every statement of
+the run locks a table of the branch's schema in its own transaction, so it never reaches main: a
+schema dropped by other means fails the run instead. A killed run's locks end with its
+connections. The engine's inventory adapter refuses all access outside a run.
 
 ### Safe settings
 

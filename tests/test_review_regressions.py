@@ -114,11 +114,14 @@ def test_enqueue_enforces_sync_and_cleanup_permissions(permissions, cleanup, all
     user = SimpleNamespace(pk=7, has_perm=lambda permission: permission in permissions)
     boundary = _load_function('jobs.py', 'enqueue_sync', {
         'can_queue_sync': can_queue_sync, 'can_run_cleanup': can_run_cleanup,
-        'PermissionDenied': PermissionError, 'branch_guard': Mock(),
+        'PermissionDenied': PermissionError,
+        'branch_guard': SimpleNamespace(refuse_background=Mock(side_effect=RuntimeError)),
     }, class_name='UnifiSyncJob')
     if allowed:
-        assert boundary(cls, user=user, cleanup_requested=cleanup) == 'queued'
-        assert enqueue.call_args.kwargs['requested_by_id'] == 7
+        # Past the permissions, a queued job is refused: it would run without a branch.
+        with pytest.raises(RuntimeError):
+            boundary(cls, user=user, cleanup_requested=cleanup)
+        enqueue.assert_not_called()
     else:
         with pytest.raises(PermissionError):
             boundary(cls, user=user, cleanup_requested=cleanup)

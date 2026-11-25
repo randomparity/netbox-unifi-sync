@@ -135,15 +135,7 @@ class UnifiSyncJob(JobRunner):
             raise PermissionDenied(
                 "Missing permission: netbox_unifi_sync.run_cleanup"
             )
-        branch_guard.require_active_branch()
-        kwargs = {
-            "dry_run": bool(dry_run),
-            "cleanup_requested": bool(cleanup_requested),
-            "trigger": trigger,
-        }
-        if user is not None and getattr(user, "pk", None):
-            kwargs["requested_by_id"] = int(user.pk)
-        return cls.enqueue(**kwargs)
+        branch_guard.refuse_background()
 
 
 @system_job(interval=60)
