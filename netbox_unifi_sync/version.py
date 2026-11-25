@@ -1,1 +1,1 @@
-__version__ = "0.3.27+homelab2"
+__version__ = "0.3.27+homelab3"
