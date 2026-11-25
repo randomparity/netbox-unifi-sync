@@ -2055,7 +2055,11 @@ def _set_interface_mac(iface_obj, mac_str):
             assigned_object_type=ct,
             assigned_object_id=raw.pk,
         )
-        DjangoInterface.objects.filter(pk=raw.pk).update(primary_mac_address=mac_obj)
+        fresh = DjangoInterface.objects.get(pk=raw.pk)
+        fresh.snapshot()
+        fresh.primary_mac_address = mac_obj
+        fresh.save()
+        raw.primary_mac_address = mac_obj
         logger.debug(f"Set MAC {clean} on interface {raw.name}")
     except Exception as e:
         logger.debug(f"Could not set MAC {mac_str!r} on interface: {e}")
