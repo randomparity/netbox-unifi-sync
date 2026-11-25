@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextvars
+from decimal import Decimal
 import hashlib
 import json
 from slugify import slugify
@@ -2787,6 +2788,11 @@ def find_device_type(nb, manufacturer, model):
     return nb.dcim.device_types.get(model=model, manufacturer_id=manufacturer.id), False
 
 
+def _spec_weight(value):
+    """Match NetBox's two-decimal weight field; a float fails validation on merge."""
+    return Decimal(str(value)).quantize(Decimal("0.01"))
+
+
 def ensure_device_type_specs(nb, nb_device_type, model):
     """Ensure a device type has correct specs (part number, u_height, interface templates)
     based on merged UNIFI_MODEL_SPECS + community library. Also syncs console/power port templates."""
@@ -2824,7 +2830,7 @@ def _ensure_device_type_specs_inner(nb, nb_device_type, model, specs):
     # weight
     if specs.get("weight") is not None:
         try:
-            w = float(specs["weight"])
+            w = _spec_weight(specs["weight"])
             if getattr(nb_device_type, "weight", None) != w:
                 nb_device_type.weight = w
                 nb_device_type.weight_unit = specs.get("weight_unit", "kg")
@@ -2966,7 +2972,7 @@ def process_device(unifi, nb, site, device, nb_ubiquity, tenant, unifi_device_ip
                     create_data["airflow"] = specs["airflow"]
                 if specs.get("weight") is not None:
                     try:
-                        create_data["weight"] = float(specs["weight"])
+                        create_data["weight"] = _spec_weight(specs["weight"])
                         create_data["weight_unit"] = specs.get("weight_unit", "kg")
                     except (ValueError, TypeError):
                         pass
