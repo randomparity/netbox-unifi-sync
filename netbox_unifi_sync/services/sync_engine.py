@@ -1276,6 +1276,20 @@ def _related_ids(value):
     }
 
 
+def _set_wlan_interfaces(wlan, interface_ids):
+    """Link through Interface, which owns the relation and so change-logs it."""
+    from dcim.models import Interface
+
+    current = _related_ids(wlan.interfaces)
+    for interface in Interface.objects.filter(pk__in=current ^ set(interface_ids)):
+        interface.snapshot()
+        if interface.pk in current:
+            interface.wireless_lans.remove(wlan.id)
+        else:
+            interface.wireless_lans.add(wlan.id)
+        interface.save()
+
+
 def sync_site_wlans(nb, site_obj, nb_site, tenant, devices=None):
     """Sync WiFi SSIDs from UniFi to NetBox wireless LANs."""
     try:
@@ -1352,10 +1366,10 @@ def sync_site_wlans(nb, site_obj, nb_site, tenant, devices=None):
                     wlan_payload["group"] = wlan_group.id
                 if vlan:
                     wlan_payload["vlan"] = vlan.id
-                if interface_ids:
-                    wlan_payload["interfaces"] = interface_ids
                 new_wlan = nb.wireless.wireless_lans.create(wlan_payload)
                 if new_wlan:
+                    if interface_ids:
+                        _set_wlan_interfaces(new_wlan, interface_ids)
                     logger.info(f"Created wireless LAN '{ssid}' at site {nb_site.name}")
             except pynetbox.core.query.RequestError as e:
                 logger.warning(f"Could not create wireless LAN '{ssid}': {e}")
@@ -1385,8 +1399,7 @@ def sync_site_wlans(nb, site_obj, nb_site, tenant, devices=None):
             if interface_ids is not None and _related_ids(
                 getattr(existing, "interfaces", [])
             ) != set(interface_ids):
-                existing.interfaces = interface_ids
-                changed = True
+                _set_wlan_interfaces(existing, interface_ids)
             if changed:
                 try:
                     existing.save()

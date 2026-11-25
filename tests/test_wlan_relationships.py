@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from netbox_unifi_sync.services import sync_engine
 from netbox_unifi_sync.services.sync_engine import (
     _wlan_broadcast_device_ids,
     _wlan_vlan_id,
@@ -77,7 +78,10 @@ def test_integration_wlan_relationship_values_are_normalized():
     assert _wlan_broadcast_device_ids(wlan) == {"ap-1", "ap-2"}
 
 
-def test_new_wlan_payload_links_site_vlan_and_broadcasting_ap_radios():
+def test_new_wlan_payload_links_site_vlan_and_broadcasting_ap_radios(monkeypatch):
+    linked = []
+    monkeypatch.setattr(
+        sync_engine, "_set_wlan_interfaces", lambda wlan, ids: linked.append((wlan.id, ids)))
     wlan = {
         "name": "Corporate",
         "enabled": True,
@@ -98,7 +102,8 @@ def test_new_wlan_payload_links_site_vlan_and_broadcasting_ap_radios():
     payload = nb.wireless.wireless_lans.created_payload
     assert payload["ssid"] == "Corporate"
     assert payload["vlan"] == 1000
-    assert payload["interfaces"] == [501, 502]
+    assert "interfaces" not in payload
+    assert linked == [(999, [501, 502])]
 
 
 def test_missing_broadcast_metadata_does_not_clear_existing_interfaces():
