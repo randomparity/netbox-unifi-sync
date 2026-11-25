@@ -230,6 +230,15 @@ def in_branch(function):
     return held
 
 
+def require_held() -> None:
+    """For code that writes inventory: refuse outside a run that holds its branch."""
+    hold = _held.get()
+    if hold is None:
+        _refuse("no sync holds a branch")
+    if hold.lost:
+        raise BranchLostError(f"Sync stopped: {hold.lost}")
+
+
 def _refuse_action(sender, branch, **kwargs):
     """Receiver of netbox-branching's pre-action signals: wait for no run, and hold off new ones.
 

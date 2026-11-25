@@ -29,6 +29,8 @@ from contextlib import nullcontext
 from ipaddress import ip_interface
 from typing import Any
 
+from .. import branch_guard
+
 logger = logging.getLogger(__name__)
 
 
@@ -181,6 +183,7 @@ class _OrmObject:
         if name == "_instance":
             object.__setattr__(self, name, value)
             return
+        branch_guard.require_held()
         instance = object.__getattribute__(self, "_instance")
         _snapshot_before_change(instance)
         # tags: django-taggit uses .set() on the manager; plain assignment is
@@ -246,6 +249,7 @@ class _OrmObject:
     # ------------------------------------------------------------------
 
     def save(self, update_fields=None):
+        branch_guard.require_held()
         instance = object.__getattribute__(self, "_instance")
         # Preserve the snapshot taken before the first attribute change.
         _snapshot_before_change(instance)
@@ -258,6 +262,7 @@ class _OrmObject:
         instance.__dict__.pop("_prechange_snapshot", None)
 
     def delete(self):
+        branch_guard.require_held()
         instance = object.__getattribute__(self, "_instance")
         instance.delete()
 
@@ -316,6 +321,7 @@ class _Endpoint:
         self._extra = extra_filter or {}
 
     def _qs(self):
+        branch_guard.require_held()
         return self._model.objects.filter(**self._extra)
 
     def _translate_kwargs(self, kwargs: dict) -> dict:
@@ -358,8 +364,9 @@ class _Endpoint:
         #   nb.dcim.cables.get(42)  →  Cable.objects.get(pk=42)
         if args:
             pk = args[0]
+            queryset = self._qs()
             try:
-                return _wrap(self._qs().get(pk=pk))
+                return _wrap(queryset.get(pk=pk))
             except self._model.DoesNotExist:
                 return None
             except Exception as exc:
@@ -390,8 +397,9 @@ class _Endpoint:
             return []
 
     def all(self) -> list["_OrmObject"]:
+        queryset = self._qs()
         try:
-            return _wrap_many(self._qs())
+            return _wrap_many(queryset)
         except Exception as exc:
             logger.debug("ORM .all() error for %s: %s", self._model.__name__, exc)
             return []
@@ -447,6 +455,7 @@ class _Endpoint:
         cycle.  The REST API uses DRF serialiser validation, not
         ``full_clean()``, so we match that behaviour here.
         """
+        branch_guard.require_held()
         if payload is None:
             payload = kwargs
         elif kwargs:

@@ -304,7 +304,7 @@ def test_a_failed_transaction_is_left_to_fail(held):
         held.connection.in_atomic_block = False
 
 
-def test_a_lost_schema_stops_every_statement_and_fails_the_run(held):
+def test_a_lost_schema_stops_every_statement_and_fails_the_run(held, real_inventory_guard):
     with pytest.raises(branch_guard.BranchLostError, match="Sync failed"):
         with branch_guard.hold_branch():
             held.connection.lock_error = RuntimeError('relation "core_objectchange" does not exist')
@@ -314,6 +314,8 @@ def test_a_lost_schema_stops_every_statement_and_fails_the_run(held):
             with pytest.raises(branch_guard.BranchLostError):
                 run_statement(held.connection)
             assert "SELECT 1" not in held.connection.sql
+            with pytest.raises(branch_guard.BranchLostError):
+                branch_guard.require_held()
     assert held.holder.closed
 
 
@@ -421,3 +423,8 @@ def test_the_plugin_connects_them_when_branching_is_installed():
     text = (Path(branch_guard.__file__).resolve().parents[1] / "__init__.py").read_text()
     assert 'if apps.is_installed("netbox_branching"):' in text
     assert "connect_branch_actions()" in text
+
+
+@pytest.fixture
+def real_inventory_guard():
+    return branch_guard.require_held

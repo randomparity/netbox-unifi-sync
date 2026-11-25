@@ -32,3 +32,12 @@ def sample_device_minimal():
         "ipAddress": "192.168.1.1",
         "id": "device-uuid-001",
     }
+
+
+@pytest.fixture(autouse=True)
+def inventory_writes_allowed(request, monkeypatch):
+    """Unit tests call the inventory adapter without a run; test_j checks the refusal."""
+    if "real_inventory_guard" in request.fixturenames:
+        return
+    from netbox_unifi_sync.services import branch_guard
+    monkeypatch.setattr(branch_guard, "require_held", lambda: None)
