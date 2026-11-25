@@ -92,6 +92,7 @@ def test_counter_signals_are_not_overwritten_by_later_saves():
 @pytest.mark.parametrize('parent_prefix, expected_mask', [(None, 32), ('10.50.0.0/24', 24)])
 def test_duplicate_device_names_create_rename_and_repeat_sync(monkeypatch, parent_prefix, expected_mask):
     from copy import deepcopy
+    monkeypatch.setenv("SYNC_KEEP_EXISTING", "false")
     role = SimpleNamespace(id=1, name='Switch')
     dtype = SimpleNamespace(id=2)
     records = []

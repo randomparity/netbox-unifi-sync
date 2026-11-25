@@ -1,4 +1,11 @@
+import pytest
+
 from main import _client_description
+
+
+@pytest.fixture(autouse=True)
+def live_readings(monkeypatch):
+    monkeypatch.setenv("SYNC_LIVE_READINGS", "true")
 
 
 def test_client_description_includes_stable_mac_prefix_and_metadata():

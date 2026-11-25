@@ -113,8 +113,7 @@ leaves curated specs alone. Cleanup has a separate type-refresh/delete pass; see
 
 ### How do I reduce change-log noise?
 
-Set the worker environment option `SYNC_LIVE_READINGS=false` to omit supported
-per-poll readings. See [configuration](configuration.md#advanced-live-readings).
+`SYNC_LIVE_READINGS` is off by default, which omits supported per-poll readings. See [configuration](configuration.md#advanced-live-readings).
 
 ### How do I upgrade?
 

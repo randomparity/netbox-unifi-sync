@@ -29,7 +29,7 @@ def test_invalid_thread_env_values_fall_back_to_defaults():
         }
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip().endswith("5 8 8")
+    assert result.stdout.strip().endswith("1 1 1")
 
 
 def test_non_positive_thread_env_values_fall_back_to_defaults():
@@ -41,4 +41,4 @@ def test_non_positive_thread_env_values_fall_back_to_defaults():
         }
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip().endswith("5 8 8")
+    assert result.stdout.strip().endswith("1 1 1")

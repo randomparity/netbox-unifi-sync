@@ -160,9 +160,9 @@ where available; otherwise a basic type is created without enriched templates.
 
 ## Live Readings and Component Counters
 
-`SYNC_LIVE_READINGS=false` omits supported rapidly changing metadata such as
-PoE draw, radio utilization, uptime and client signal/AP/timestamps. Set it in
-the worker environment; it has no Settings UI field. Stable metadata remains.
+`SYNC_LIVE_READINGS=false`, the default, omits supported rapidly changing metadata such as
+PoE draw, radio utilization, uptime and client signal/AP/timestamps. It has no
+Settings UI field, and a sync is refused with it on. Stable metadata remains.
 
 Power ports created from device-type templates rely on NetBox counter caches.
 Version 0.3.26 refreshes signal-updated counters before subsequent saves. This

@@ -13,7 +13,7 @@ import ipaddress
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib3.exceptions import InsecureRequestWarning
-from . import branch_guard
+from . import branch_guard, safe_settings
 # Import the unifi module instead of defining the Unifi class
 from .sync import ipam as ipam_helpers
 from .sync import vrf as vrf_helpers
@@ -114,9 +114,9 @@ def _close_thread_db_connections():
 
 # Threading limits (configurable via env vars)
 # Use guarded parsing to avoid startup crashes on invalid env values.
-MAX_CONTROLLER_THREADS = _read_env_int("MAX_CONTROLLER_THREADS", default=5, minimum=1)
-MAX_SITE_THREADS = _read_env_int("MAX_SITE_THREADS", default=8, minimum=1)
-MAX_DEVICE_THREADS = _read_env_int("MAX_DEVICE_THREADS", default=8, minimum=1)
+MAX_CONTROLLER_THREADS = _read_env_int("MAX_CONTROLLER_THREADS", default=1, minimum=1)
+MAX_SITE_THREADS = _read_env_int("MAX_SITE_THREADS", default=1, minimum=1)
+MAX_DEVICE_THREADS = _read_env_int("MAX_DEVICE_THREADS", default=1, minimum=1)
 
 # Populated at runtime from NETBOX roles in environment variables
 netbox_device_roles = {}
@@ -498,7 +498,7 @@ def extract_asset_tag(device_name: str | None) -> str | None:
     if not device_name:
         return None
 
-    if not _parse_env_bool(os.getenv("UNIFI_ASSET_TAG_ENABLED"), default=True):
+    if not _parse_env_bool(os.getenv("UNIFI_ASSET_TAG_ENABLED"), default=False):
         return None
 
     for regex in _load_asset_tag_patterns():
@@ -682,10 +682,10 @@ def _sync_live_readings():
     PoE draw, radio utilization, uptime, last-seen times, client signal and the
     client's current AP differ on nearly every run. NetBox change-logs every
     write, so with readings on, each run adds a change record per port, radio,
-    device and client even when nothing about the network changed. Set
-    SYNC_LIVE_READINGS=false to keep them out (default: on, the old behaviour).
+    device and client even when nothing about the network changed. They are off
+    unless SYNC_LIVE_READINGS is set, and a sync is refused with them on.
     """
-    return os.getenv("SYNC_LIVE_READINGS", "true").strip().lower() not in ("false", "0", "no", "off")
+    return os.getenv("SYNC_LIVE_READINGS", "false").strip().lower() not in ("false", "0", "no", "off")
 
 
 def sync_device_custom_fields(nb, nb_device, device):
@@ -772,7 +772,7 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     # Check if device is offline — remove cables and skip
     device_state = (device.get("state") or device.get("status") or "").upper()
     if device_state in ("OFFLINE", "DISCONNECTED", "0"):
-        if not _sync_option("SYNC_OFFLINE_CABLE_DELETE", default=True):
+        if not _sync_option("SYNC_OFFLINE_CABLE_DELETE", default=False):
             return
         # Remove cables from this device's interfaces, but only if the cable
         # does NOT connect to a Front Port or Rear Port on the other end
@@ -806,7 +806,7 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     upstream_mac = uplink.get("uplink_mac") or uplink.get("mac") or uplink.get("macAddress")
     uplink_port_name = uplink.get("name") or uplink.get("uplink_port") or uplink.get("port_name") or uplink.get("portName")
     upstream_port_name = uplink.get("uplink_remote_port") or uplink.get("remotePort")
-    if not upstream_port_name and not _sync_option("SYNC_CABLES_STRICT", default=False):
+    if not upstream_port_name and not _sync_option("SYNC_CABLES_STRICT", default=True):
         upstream_port_name = uplink.get("port_name")
 
     if not upstream_device_id and not upstream_mac:
@@ -838,7 +838,7 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     our_iface = None
     if uplink_port_name:
         our_iface = nb.dcim.interfaces.get(device_id=nb_device.id, name=uplink_port_name)
-    strict = _sync_option("SYNC_CABLES_STRICT", default=False)
+    strict = _sync_option("SYNC_CABLES_STRICT", default=True)
     if not our_iface and not strict:
         # Try to find any interface marked as uplink
         all_ifaces = list(nb.dcim.interfaces.filter(device_id=nb_device.id))
@@ -944,7 +944,7 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
 
 
 def _keep_existing():
-    return _sync_option("SYNC_KEEP_EXISTING", default=False)
+    return _sync_option("SYNC_KEEP_EXISTING", default=True)
 
 
 def sync_site_vlans(nb, site_obj, nb_site, tenant):
@@ -2255,7 +2255,7 @@ def sync_device_interfaces(nb, nb_device, device, api_style="integration", unifi
                 except pynetbox.core.query.RequestError as e:
                     logger.warning(f"Failed to create radio {iface_name} on {device_name}: {e}")
 
-    if not _sync_option("SYNC_INTERFACE_DELETE", default=True):
+    if not _sync_option("SYNC_INTERFACE_DELETE", default=False):
         return
 
     # Clean up interfaces with '?' in name (leftover from previous runs with missing data)
@@ -3458,7 +3458,7 @@ def process_site(unifi, nb, site_obj, site_display_name, nb_site, nb_ubiquity, t
                     logger.warning(f"Failed to sync client IPs for site {site_display_name}: {e}")
 
             # Auto-discover DHCP ranges from UniFi network configs
-            if os.getenv("DHCP_AUTO_DISCOVER", "true").strip().lower() in ("true", "1", "yes"):
+            if os.getenv("DHCP_AUTO_DISCOVER", "false").strip().lower() in ("true", "1", "yes"):
                 try:
                     site_dhcp_pools = extract_dhcp_pools_from_unifi(site_obj, unifi=unifi)
                     site_dhcp_ranges = []
@@ -3485,7 +3485,7 @@ def process_site(unifi, nb, site_obj, site_display_name, nb_site, nb_ubiquity, t
                             f"for site {site_display_name}: {[str(n) for n in site_dhcp_ranges]}"
                         )
 
-                    if _parse_env_bool(os.getenv("SYNC_DHCP_RANGES"), default=True):
+                    if _parse_env_bool(os.getenv("SYNC_DHCP_RANGES"), default=False):
                         sync_site_dhcp_ip_ranges(nb, nb_site, tenant, site_dhcp_pools)
                 except Exception as e:
                     logger.warning(f"Failed to extract DHCP ranges for site {site_display_name}: {e}")
@@ -3592,7 +3592,7 @@ def process_site(unifi, nb, site_obj, site_display_name, nb_site, nb_ubiquity, t
 
             # Detect stale devices (in NetBox but no longer in UniFi).
             # Status is intentionally left unchanged.
-            if os.getenv("SYNC_STALE_CLEANUP", "true").strip().lower() in ("true", "1", "yes"):
+            if os.getenv("SYNC_STALE_CLEANUP", "false").strip().lower() in ("true", "1", "yes"):
                 try:
                     unifi_serials = set()
                     for d in devices:
@@ -4049,6 +4049,11 @@ def run_sync_once(config=None, clear_state=False):
     :return: Dict with run metadata.
     """
     branch_guard.require_active_branch()
+    safe_settings.require_safe_environment({
+        "MAX_CONTROLLER_THREADS": MAX_CONTROLLER_THREADS,
+        "MAX_SITE_THREADS": MAX_SITE_THREADS,
+        "MAX_DEVICE_THREADS": MAX_DEVICE_THREADS,
+    })
     config = config or _load_runtime_or_exit()
     context = _build_netbox_context(config)
     if clear_state:

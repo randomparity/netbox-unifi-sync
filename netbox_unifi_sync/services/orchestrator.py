@@ -15,7 +15,7 @@ from ..models import (
     SiteMapping,
     UnifiController,
 )
-from . import branch_guard
+from . import branch_guard, safe_settings
 from .audit import sanitize_error
 from .runtime import auth_signature, redact_runtime, to_controller_runtime
 from ._validation import SyncConfigurationError, validate_runtime_config as _validate_runtime_config
@@ -285,6 +285,7 @@ def run_sync(*, dry_run: bool, cleanup_requested: bool, requested_by_id: int | N
             "details": {"status": "skipped", "reason": "Plugin settings disabled"},
         }
 
+    safe_settings.require_safe_settings(settings, cleanup_requested=cleanup_requested)
     controllers = get_enabled_controllers(controller_ids=controller_ids)
     if not controllers:
         raise SyncConfigurationError("No enabled UniFi controllers configured.")

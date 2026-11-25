@@ -1,4 +1,11 @@
+import pytest
+
 from main import normalize_port_data, normalize_radio_data
+
+
+@pytest.fixture(autouse=True)
+def live_readings(monkeypatch):
+    monkeypatch.setenv("SYNC_LIVE_READINGS", "true")
 
 
 def test_normalize_integration_port_enriches_description_with_profile_vlan_and_poe():

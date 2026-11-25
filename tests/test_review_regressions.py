@@ -172,7 +172,7 @@ def test_controllers_share_execution_only_when_site_mappings_match(same_mapping,
         '_collect_site_mappings': mappings,
         '_validate_runtime_config': validate_runtime_config,
         '_build_override': lambda settings, rows, site_mappings, **kwargs: site_mappings,
-        'legacy_execute_sync': execute, 'branch_guard': Mock(),
+        'legacy_execute_sync': execute, 'branch_guard': Mock(), 'safe_settings': Mock(),
     })
     result = run(dry_run=False, cleanup_requested=True)
     assert execute.call_count == expected_groups

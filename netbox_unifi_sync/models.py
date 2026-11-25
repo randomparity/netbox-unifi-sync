@@ -55,7 +55,7 @@ class GlobalSyncSettings(_ChangeLoggingMixin, models.Model):
     default_site = models.CharField(max_length=100, blank=True)
     tag_strategy = models.CharField(max_length=16, choices=TagStrategy.choices, default=TagStrategy.APPEND)
     default_tags = models.JSONField(default=list, blank=True)
-    asset_tag_enabled = models.BooleanField(default=True)
+    asset_tag_enabled = models.BooleanField(default=False)
     asset_tag_patterns = models.JSONField(
         default=list,
         blank=True,
@@ -96,7 +96,7 @@ class GlobalSyncSettings(_ChangeLoggingMixin, models.Model):
     sync_vlans = models.BooleanField(default=True)
     sync_wlans = models.BooleanField(default=True)
     sync_cables = models.BooleanField(default=True)
-    sync_stale_cleanup = models.BooleanField(default=True)
+    sync_stale_cleanup = models.BooleanField(default=False)
     sync_client_ips = models.BooleanField(
         default=False,
         help_text=(
@@ -105,7 +105,7 @@ class GlobalSyncSettings(_ChangeLoggingMixin, models.Model):
         ),
     )
 
-    dhcp_auto_discover = models.BooleanField(default=True)
+    dhcp_auto_discover = models.BooleanField(default=False)
     dhcp_ranges = models.TextField(
         blank=True,
         default="",
@@ -113,7 +113,7 @@ class GlobalSyncSettings(_ChangeLoggingMixin, models.Model):
                   "Merged with auto-discovered ranges.",
     )
     sync_dhcp_ranges = models.BooleanField(
-        default=True,
+        default=False,
         help_text="Sync DHCP IP ranges to NetBox IPAM.",
     )
     dhcp_writeback_enabled = models.BooleanField(default=False)
@@ -156,9 +156,9 @@ class GlobalSyncSettings(_ChangeLoggingMixin, models.Model):
     retry_backoff_base = models.FloatField(default=1.0)
     retry_backoff_max = models.FloatField(default=30.0)
 
-    max_controller_threads = models.PositiveIntegerField(default=5)
-    max_site_threads = models.PositiveIntegerField(default=8)
-    max_device_threads = models.PositiveIntegerField(default=8)
+    max_controller_threads = models.PositiveIntegerField(default=1)
+    max_site_threads = models.PositiveIntegerField(default=1)
+    max_device_threads = models.PositiveIntegerField(default=1)
     rate_limit_per_second = models.PositiveIntegerField(default=0)
 
     specs_auto_refresh = models.BooleanField(default=False)

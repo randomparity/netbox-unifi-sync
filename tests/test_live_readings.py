@@ -15,8 +15,10 @@ CLIENT = {
 PORT = {"poe_power": "4.34"}
 
 
-def test_readings_on_by_default(monkeypatch):
+def test_readings_off_by_default(monkeypatch):
     monkeypatch.delenv("SYNC_LIVE_READINGS", raising=False)
+    assert sync_engine._sync_live_readings() is False
+    monkeypatch.setenv("SYNC_LIVE_READINGS", "true")
     assert sync_engine._sync_live_readings() is True
     assert "Signal: -62dBm" in sync_engine._client_description(CLIENT)
     assert "PoE draw" in sync_engine._build_port_description(PORT, poe="auto")

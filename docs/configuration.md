@@ -184,6 +184,19 @@ Every sync, dry runs included, is refused unless a netbox-branching branch is ac
 schema exists, and inventory reads and writes go to it. Background jobs and the schedule have no
 branch, so they are refused too. Start a sync from code that activates the branch.
 
+### Safe settings
+
+A sync, dry runs included, is refused with any of these on: `schedule_enabled`,
+`sync_stale_cleanup`, `cleanup_enabled` (or a requested cleanup), `sync_client_ips`,
+`dhcp_auto_discover`, `sync_dhcp_ranges`, `dhcp_writeback_enabled`, `sync_device_status`,
+`asset_tag_enabled`, `specs_auto_refresh`. All are off by default. The three thread counts must
+be 1, the default; the engine reads `MAX_*_THREADS` when it is imported. Settings saved by an
+earlier version keep their values, so turn them off.
+
+The engine also refuses `SYNC_KEEP_EXISTING` or `SYNC_CABLES_STRICT` off, and
+`SYNC_OFFLINE_CABLE_DELETE`, `SYNC_INTERFACE_DELETE` or `SYNC_LIVE_READINGS` on. Unset, each has
+its safe value.
+
 ### Scheduling
 
 - `schedule_enabled`
@@ -239,7 +252,7 @@ The plugin maps UI state into these internal engine keys (for compatibility/debu
 | `SYNC_STALE_CLEANUP` | `sync_stale_cleanup` |
 | `SYNC_CLIENT_IPS` | `sync_client_ips` |
 | `SYNC_PREFIXES` | `sync_prefixes` (default `true`) |
-| `SYNC_DHCP_RANGES` | `sync_dhcp_ranges` (default `true`) |
+| `SYNC_DHCP_RANGES` | `sync_dhcp_ranges` (default `false`) |
 | `DHCP_AUTO_DISCOVER` | `dhcp_auto_discover` |
 | `DHCP_RANGES` | `dhcp_ranges` |
 | `DHCP_WRITEBACK_ENABLED` | `dhcp_writeback_enabled` |
@@ -305,11 +318,9 @@ history and are viewed from the plugin dashboard/run detail pages.
 
 ## Advanced: live readings
 
-`SYNC_LIVE_READINGS` is a worker-process environment option, default `true`.
-There is currently no corresponding Settings form field. Set it to `false` in
-the environment of every process that executes sync (including management
-commands), then restart workers, to omit frequently changing uptime/last-seen,
-PoE draw, radio utilization and client AP/signal/timestamp metadata. Stable
+`SYNC_LIVE_READINGS` is a process environment option, default `false`, which omits
+frequently changing uptime/last-seen, PoE draw, radio utilization and client
+AP/signal/timestamp metadata. A sync is refused with it on. Stable
 identity, firmware, MAC, IP and SSID information continues to sync. Existing
 custom-field values can remain unchanged; description fields may be rewritten
 without live readings. See [device specs](device-specs.md).

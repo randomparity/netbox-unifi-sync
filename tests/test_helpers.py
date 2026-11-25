@@ -2,6 +2,8 @@
 import os
 from unittest.mock import patch
 
+import pytest
+
 from main import (
     get_device_name,
     get_device_mac,
@@ -103,6 +105,10 @@ class TestGetDeviceSerial:
 # ---------------------------------------------------------------------------
 
 class TestExtractAssetTag:
+    @pytest.fixture(autouse=True)
+    def enabled(self, monkeypatch):
+        monkeypatch.setenv("UNIFI_ASSET_TAG_ENABLED", "true")
+
     def test_extracts_id_tag(self):
         assert extract_asset_tag("IT-AULA-AP02-ID3006") == "ID3006"
 

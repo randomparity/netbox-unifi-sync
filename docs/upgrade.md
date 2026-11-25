@@ -84,7 +84,7 @@ remain applicable when upgrading from older versions.
 | Change log | Request context reaches worker threads; snapshots precede changes. | Check representative object creates and updates. |
 | Login/clients | Fresh login clears old cookie state; legacy connected-client listing uses `stat/sta`. | Repeat a session-auth run; check clients when client IP sync is enabled. |
 
-`SYNC_LIVE_READINGS=false` can reduce per-poll metadata writes. It is a worker
+`SYNC_LIVE_READINGS`, off by default, omits per-poll metadata writes. It is a
 process environment option, not a Settings field; see [configuration](configuration.md#advanced-live-readings).
 
 ## Run after upgrade
