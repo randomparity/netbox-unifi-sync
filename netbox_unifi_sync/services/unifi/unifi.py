@@ -12,6 +12,7 @@ import pyotp
 import requests
 from urllib3.exceptions import InsecureRequestWarning
 
+from .pinning import pinned_session
 from .sites import Sites
 
 file_lock = threading.Lock()
@@ -63,6 +64,7 @@ class Unifi:
         api_key_header=None,
         allow_login_fallback=True,
         verify_ssl=None,
+        cert_sha256=None,
     ):
         logger.debug(f"Initializing UniFi connection to: {base_url}")
         self.base_url = base_url.rstrip("/") if base_url else base_url
@@ -73,7 +75,7 @@ class Unifi:
         self.api_key_header = api_key_header
         self.allow_login_fallback = bool(allow_login_fallback)
 
-        self.session = requests.Session()
+        self.session = pinned_session(cert_sha256)
         self.csrf_token = None
         self.auth_mode = None
         self.api_prefix = ""

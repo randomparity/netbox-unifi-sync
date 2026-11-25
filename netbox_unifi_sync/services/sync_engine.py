@@ -35,6 +35,7 @@ from .sync.runtime_config import _unifi_verify_ssl, _netbox_verify_ssl, _sync_in
 
 from .sync.log_sanitizer import SensitiveDataFormatter
 from .sync.vrf import get_or_create_vrf, get_vrf_for_site  # noqa: F401
+from .unifi.pinning import CertificatePinError
 from .unifi.unifi import Unifi
 from .unifi.model_specs import UNIFI_MODEL_SPECS
 from .unifi.spec_refresh import refresh_specs_bundle, write_specs_bundle
@@ -3633,6 +3634,7 @@ def process_controller(unifi_url, unifi_username, unifi_password, unifi_mfa_secr
             unifi_mfa_secret,
             api_key=unifi_api_key,
             api_key_header=unifi_api_key_header,
+            cert_sha256=os.getenv("UNIFI_CERT_SHA256"),
         )
         logger.debug(f"UniFi connection established to: {unifi_url}")
         
@@ -3657,6 +3659,8 @@ def process_controller(unifi_url, unifi_username, unifi_password, unifi_mfa_secr
             # Wait for all site-processing threads to complete
             for future in as_completed(futures):
                 future.result()
+    except CertificatePinError:
+        raise
     except Exception as e:
         logger.error(f"Error processing controller {unifi_url}: {e}")
 
@@ -3690,6 +3694,8 @@ def process_all_controllers(unifi_url_list, unifi_username, unifi_password, unif
             url = future_to_url[future]
             try:
                 future.result()
+            except CertificatePinError:
+                raise
             except Exception as e:
                 logger.exception(f"Error processing one of the UniFi controllers {url}: {e}")
                 continue

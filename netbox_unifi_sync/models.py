@@ -8,6 +8,8 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
+from .services.unifi.pinning import CertificatePinError, normalize_pin
+
 try:
     from netbox.models.features import ChangeLoggingMixin as _ChangeLoggingMixin
 except ImportError:  # pragma: no cover
@@ -247,6 +249,12 @@ class UnifiController(_ChangeLoggingMixin, models.Model):
     mfa_secret_ref = models.CharField(max_length=255, blank=True, help_text="Use env:VAR_NAME or file:/path")
 
     verify_ssl = models.BooleanField(default=True)
+    cert_sha256 = models.CharField(
+        max_length=95,
+        blank=True,
+        default="",
+        help_text="SHA-256 fingerprint of the console's certificate. Required to connect.",
+    )
     request_timeout = models.PositiveIntegerField(null=True, blank=True)
     http_retries = models.PositiveIntegerField(null=True, blank=True)
     retry_backoff_base = models.FloatField(null=True, blank=True)
@@ -271,6 +279,12 @@ class UnifiController(_ChangeLoggingMixin, models.Model):
         self.username_ref = (self.username_ref or "").strip()
         self.password_ref = (self.password_ref or "").strip()
         self.mfa_secret_ref = (self.mfa_secret_ref or "").strip()
+
+        if self.cert_sha256:
+            try:
+                self.cert_sha256 = normalize_pin(self.cert_sha256)
+            except CertificatePinError as exc:
+                errors["cert_sha256"] = str(exc)
 
         # Allow saving controller definitions before credentials are wired in.
         # Runtime sync/test enforces auth requirements for the selected mode.

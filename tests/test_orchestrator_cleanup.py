@@ -24,7 +24,7 @@ def _make_settings(tenant="Default", roles=None):
 
 def _groups(n):
     """Return a dict with n distinct credential-group keys."""
-    return {(f"sig-{i}",): [{}] for i in range(n)}
+    return {(f"sig-{i}",): [{"runtime": MagicMock(cert_sha256="ab" * 32)}] for i in range(n)}
 
 
 # ---------------------------------------------------------------------------

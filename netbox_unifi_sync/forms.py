@@ -235,6 +235,7 @@ class UnifiControllerForm(forms.ModelForm):
             "password_ref",
             "mfa_secret_ref",
             "verify_ssl",
+            "cert_sha256",
             "request_timeout",
             "http_retries",
             "retry_backoff_base",

@@ -8,6 +8,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from .unifi.pinning import CertificatePinError, normalize_pin
+
 logger = logging.getLogger("netbox.plugins.netbox_unifi_sync.orchestrator")
 
 
@@ -32,6 +34,13 @@ def validate_runtime_config(
         raise SyncConfigurationError("tenant_name must be configured.")
     if not settings.netbox_roles:
         raise SyncConfigurationError("netbox_roles must be configured.")
+
+    for rows in runtime_groups.values():
+        for row in rows:
+            try:
+                normalize_pin(row["runtime"].cert_sha256)
+            except CertificatePinError as exc:
+                raise SyncConfigurationError(f"Controller {row['runtime'].name}: {exc}") from exc
 
     if cleanup_requested and len(runtime_groups) > 1:
         logger.warning(

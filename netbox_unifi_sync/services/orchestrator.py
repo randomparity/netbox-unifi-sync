@@ -127,6 +127,7 @@ def _build_override(
         "password": first.password,
         "unifi_mfa_secret": first.mfa_secret,
         "verify_ssl": bool(first.verify_ssl),
+        "unifi_cert_sha256": first.cert_sha256,
         "unifi_request_timeout": int(first.request_timeout),
         "unifi_http_retries": int(first.http_retries),
         "unifi_retry_backoff_base": float(first.retry_backoff_base),
@@ -192,6 +193,7 @@ def _build_unifi_client(runtime):
             api_key_header=runtime.api_key_header,
             allow_login_fallback=False,
             verify_ssl=runtime.verify_ssl,
+            cert_sha256=runtime.cert_sha256,
         )
 
     return Unifi(
@@ -200,6 +202,7 @@ def _build_unifi_client(runtime):
         password=runtime.password,
         mfa_secret=runtime.mfa_secret or None,
         verify_ssl=runtime.verify_ssl,
+        cert_sha256=runtime.cert_sha256,
     )
 
 

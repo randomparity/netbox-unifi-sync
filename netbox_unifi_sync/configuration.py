@@ -42,6 +42,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "unifi_mfa_secret": "",
     "verify_ssl": True,
     "unifi_verify_ssl": True,
+    "unifi_cert_sha256": "",
     "unifi_persist_session": True,
     "netbox_import_tenant": "",
     "netbox_tenant": "",
@@ -392,6 +393,8 @@ def plugin_settings_to_env(plugin_settings: dict[str, Any]) -> dict[str, str]:
 
     auth_mode = str(plugin_settings.get("auth_mode") or "api_key").strip().lower()
     env_values["UNIFI_AUTH_MODE"] = auth_mode
+    # Always set, so that no other controller's pin is left in the environment.
+    env_values["UNIFI_CERT_SHA256"] = str(plugin_settings.get("unifi_cert_sha256") or "").strip()
 
     for key, env_name in _ENV_MAP.items():
         value = resolve_secret_value(plugin_settings.get(key))

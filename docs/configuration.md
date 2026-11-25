@@ -200,6 +200,19 @@ its safe value.
 With `SYNC_KEEP_EXISTING`, the name and status of a VLAN that exists are kept, also when UniFi
 disables its network.
 
+### Console certificate
+
+Each controller has `cert_sha256`, the SHA-256 fingerprint of its console's certificate, as 64 hex
+digits with or without colons. Nothing connects without one: not a sync, a connection test or the
+site list of the mapping form. A console that shows any other certificate is refused before a
+request is sent, on every connection, whether for a redirect, a retry, a login or the legacy API.
+Plain HTTP and proxies are refused, and proxies, `.netrc` and CA bundles of the environment are
+not used. `verify_ssl` is checked as well, so it must be off for a self-signed certificate.
+
+When the certificate is renewed, everything is refused until `cert_sha256` is changed. Check the
+new fingerprint at the console itself, not from the refusal. A branch has its own copy of the
+controller: one made before the change keeps the old pin, so make the branch afterwards.
+
 ### Scheduling
 
 - `schedule_enabled`

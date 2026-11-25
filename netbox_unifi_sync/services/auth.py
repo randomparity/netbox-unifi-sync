@@ -24,6 +24,7 @@ class UnifiAuthSettings:
     password: str
     mfa_secret: str
     verify_ssl: bool = True
+    cert_sha256: str = ""
 
     @classmethod
     def from_plugin_settings(cls, plugin_settings: dict[str, Any]) -> "UnifiAuthSettings":
@@ -43,6 +44,7 @@ class UnifiAuthSettings:
             password=password,
             mfa_secret=mfa_secret,
             verify_ssl=verify_ssl,
+            cert_sha256=str(plugin_settings.get("unifi_cert_sha256") or ""),
         )
 
     def validate(self) -> None:
@@ -64,6 +66,7 @@ class UnifiAuthSettings:
                 api_key_header=self.api_key_header or "X-API-KEY",
                 allow_login_fallback=False,
                 verify_ssl=self.verify_ssl,
+                cert_sha256=self.cert_sha256,
             )
         logger.debug("Building UniFi client using login auth")
         return Unifi(
@@ -72,4 +75,5 @@ class UnifiAuthSettings:
             password=self.password,
             mfa_secret=self.mfa_secret or None,
             verify_ssl=self.verify_ssl,
+            cert_sha256=self.cert_sha256,
         )

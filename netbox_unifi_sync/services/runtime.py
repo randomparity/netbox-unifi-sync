@@ -17,6 +17,7 @@ class ControllerRuntimeConfig:
     password: str
     mfa_secret: str
     verify_ssl: bool
+    cert_sha256: str
     request_timeout: int
     http_retries: int
     retry_backoff_base: float
@@ -39,6 +40,7 @@ def to_controller_runtime(controller: Any, defaults: dict[str, Any]) -> Controll
         password=_secret(getattr(controller, "password_ref", "")),
         mfa_secret=_secret(getattr(controller, "mfa_secret_ref", "")),
         verify_ssl=bool(getattr(controller, "verify_ssl", defaults.get("verify_ssl_default", True))),
+        cert_sha256=str(getattr(controller, "cert_sha256", "") or "").strip(),
         request_timeout=int(getattr(controller, "request_timeout", None) or defaults.get("request_timeout", 15)),
         http_retries=int(getattr(controller, "http_retries", None) or defaults.get("http_retries", 3)),
         retry_backoff_base=float(getattr(controller, "retry_backoff_base", None) or defaults.get("retry_backoff_base", 1.0)),
@@ -55,6 +57,7 @@ def auth_signature(cfg: ControllerRuntimeConfig) -> tuple[str, ...]:
         cfg.password,
         cfg.mfa_secret,
         str(cfg.verify_ssl),
+        cfg.cert_sha256,
         str(cfg.request_timeout),
         str(cfg.http_retries),
         str(cfg.retry_backoff_base),
@@ -80,6 +83,7 @@ def redact_runtime(cfg: ControllerRuntimeConfig) -> dict[str, Any]:
         "password": "***" if cfg.password else "",
         "mfa_secret": "***" if cfg.mfa_secret else "",
         "verify_ssl": cfg.verify_ssl,
+        "cert_sha256": cfg.cert_sha256,
         "request_timeout": cfg.request_timeout,
         "http_retries": cfg.http_retries,
         "retry_backoff_base": cfg.retry_backoff_base,

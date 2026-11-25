@@ -32,7 +32,7 @@ def _build_unifi(monkeypatch, **env):
     with patch.object(Unifi, "load_session_from_file", return_value=None), patch.object(
         Unifi, "configure_integration_api", return_value=True
     ), patch.object(Unifi, "get_sites", return_value={}):
-        return Unifi("https://controller.example.com", api_key="api-key")
+        return Unifi("https://controller.example.com", api_key="api-key", cert_sha256="ab" * 32)
 
 
 def test_unifi_ssl_verify_defaults_to_true(monkeypatch):
@@ -133,6 +133,7 @@ def test_falls_back_to_legacy_when_integration_probe_fails(monkeypatch):
     ):
         unifi = Unifi(
             "https://controller.example.com",
+            cert_sha256="ab" * 32,
             username="admin",
             password="secret",
             api_key="not-valid-for-legacy",
@@ -149,6 +150,7 @@ def _build_login_client(monkeypatch):
     ), patch.object(Unifi, "get_sites", return_value={}):
         return Unifi(
             "https://controller.example.com",
+            cert_sha256="ab" * 32,
             username="admin",
             password="secret",
         )
