@@ -111,7 +111,9 @@ Check in order:
   points; WLAN-to-interface linkage requires the Integration API's
   `broadcastingDeviceIds` data
 - WLAN relationships are synchronized after device radio interfaces, so the
-  first full sync can populate both the WLAN and its interface assignments
+  first full sync can populate both the WLAN and its interface assignments;
+  each link is saved on the interface, so it appears in the interface's change
+  log
 
 ### Prefix exists but DHCP range missing
 
