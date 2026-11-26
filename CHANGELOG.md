@@ -11,6 +11,12 @@ All notable changes to this project are documented in this file.
   5.1.2), worker threads kept their connections, the pool ran dry, lookups timed
   out after 30 s and were reported as not found, and a sync took minutes
   (#35).
+- Leave an IP address where it is when gateway, device or client IP sync would
+  move it from another device, where it is that device's primary or
+  out-of-band IP, or from a virtual machine, and log `Kept IP ...` as a
+  warning. NetBox refuses that move only when it validates; the ORM made it,
+  leaving a device whose primary IP was assigned elsewhere. The gateway's
+  fallback no longer takes such an address as its own primary IP.
 
 ## [0.3.27] - 2026-10-31
 

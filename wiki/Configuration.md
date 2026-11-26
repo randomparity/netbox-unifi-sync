@@ -57,6 +57,10 @@ With `sync_prefixes=false`, normal sync creates neither configured nor inferred
 prefixes. Existing prefixes are retained; primary IPs use a parent mask or a host
 mask when none exists. DHCP-range sync has its own toggle.
 
+An IP address that is another device's primary or out-of-band IP, or that is on
+a virtual machine, is never moved to a UniFi interface; the sync logs
+`Kept IP ...` as a warning instead.
+
 Controller-specific site mappings override global mappings. Controllers with
 different effective mappings execute separately even when credentials match;
 cleanup is skipped across separate execution groups.

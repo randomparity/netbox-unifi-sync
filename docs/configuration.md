@@ -98,6 +98,11 @@ matching NetBox `dcim.Interface` or `virtualization.VMInterface` when the client
 MAC address exists on that interface. Integration API field names such as
 `macAddress`, `ipAddress`, `connectedAt`, and `lastSeenAt` are supported.
 
+Gateway, device and client IP sync never move an existing IP address that is
+another device's primary or out-of-band IP, or that is assigned to a virtual
+machine interface. They leave it where it is and log `Kept IP ...` as a
+warning, on every run until the address or UniFi's data changes.
+
 ### IPAM and DHCP
 
 - `dhcp_auto_discover`

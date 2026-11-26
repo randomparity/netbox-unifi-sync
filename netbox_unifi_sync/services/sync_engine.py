@@ -1615,7 +1615,11 @@ def sync_client_ips(nb, site_obj, nb_site, tenant):
                     cur_id = getattr(nb_ip, "assigned_object_id", None)
                     assigned_object_type = _assignment_object_type(interface)
                     cur_type = str(getattr(nb_ip, "assigned_object_type", "") or "")
-                    if cur_type != assigned_object_type or str(cur_id or "") != str(interface.id):
+                    moved = cur_type != assigned_object_type or str(cur_id or "") != str(interface.id)
+                    owner = getattr(interface, "device_id", None)
+                    if moved and _held_by_other(nb, nb_ip, owner):
+                        logger.warning(f"Kept IP {ip_with_mask} where it is, not on client {mac_norm}")
+                    elif moved:
                         nb_ip.assigned_object_type = assigned_object_type
                         nb_ip.assigned_object_id = interface.id
                         needs_update = True
@@ -2252,6 +2256,21 @@ def sync_device_interfaces(nb, nb_device, device, api_style="integration", unifi
             logger.warning(f"Failed to delete stale interface '{iface_name}' from {device_name}: {e}")
 
 
+def _held_by_other(nb, nb_ip, device_id):
+    """Whether *nb_ip* is the primary or OOB IP of another device, or on a VM.
+
+    NetBox refuses to move such an address, but only when it validates: a write
+    through the ORM moves it, and the branch that holds it cannot be merged.
+    """
+    if str(getattr(nb_ip, "assigned_object_type", "") or "").startswith("virtualization."):
+        return True
+    return any(
+        str(other.id) != str(device_id)
+        for field in ("primary_ip4_id", "primary_ip6_id", "oob_ip_id")
+        for other in nb.dcim.devices.filter(**{field: nb_ip.id})
+    )
+
+
 def sync_gateway_interfaces(nb, nb_device, device, site_obj, tenant, vrf, unifi=None):
     """Sync VLAN and management interfaces + IPs for a UniFi Security Appliance (GATEWAY).
 
@@ -2404,6 +2423,9 @@ def sync_gateway_interfaces(nb, nb_device, device, site_obj, tenant, vrf, unifi=
             cur_obj_id = getattr(nb_ip, "assigned_object_id", None)
             cur_obj_type = str(getattr(nb_ip, "assigned_object_type", "") or "")
             if cur_obj_type != "dcim.interface" or str(cur_obj_id or "") != str(interface.id):
+                if _held_by_other(nb, nb_ip, nb_device.id):
+                    logger.warning(f"Kept IP {ip_with_mask} where it is, not on {device_name}/{iface_name}")
+                    continue
                 try:
                     nb_ip.assigned_object_type = "dcim.interface"
                     nb_ip.assigned_object_id = interface.id
@@ -2437,7 +2459,7 @@ def sync_gateway_interfaces(nb, nb_device, device, site_obj, tenant, vrf, unifi=
                 plen = str(prefixes[0].prefix).split("/")[1]
                 fallback_str = f"{device_ip}/{plen}"
                 nb_ip = nb.ipam.ip_addresses.get(address=fallback_str)
-                if nb_ip:
+                if nb_ip and not _held_by_other(nb, nb_ip, nb_device.id):
                     nb_device.primary_ip4 = nb_ip.id
                     nb_device.save()
                     logger.info(f"Set fallback primary_ip4 for {device_name} to {fallback_str}")
@@ -3335,6 +3357,9 @@ def process_device(unifi, nb, site, device, nb_ubiquity, tenant, unifi_device_ip
                     return
 
                 if int(current_assigned_id or 0) != int(interface.id) or current_assigned_type != "dcim.interface":
+                    if _held_by_other(nb, nb_ip, nb_device.id):
+                        logger.warning(f"Kept IP {ip} where it is, not on {device_name}/{interface.name}")
+                        return
                     try:
                         nb_ip.assigned_object_type = "dcim.interface"
                         nb_ip.assigned_object_id = interface.id
