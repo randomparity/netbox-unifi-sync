@@ -11,6 +11,9 @@ All notable changes to this project are documented in this file.
   5.1.2), worker threads kept their connections, the pool ran dry, lookups timed
   out after 30 s and were reported as not found, and a sync took minutes
   (#35).
+- Write a device type's weight with the two decimals of NetBox's field. The
+  float from the specs never equalled the stored value, so the weight was
+  written on every sync, and a value with more places failed validation.
 
 ## [0.3.27] - 2026-10-31
 
