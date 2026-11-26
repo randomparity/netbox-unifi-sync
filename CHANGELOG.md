@@ -9,8 +9,8 @@ All notable changes to this project are documented in this file.
 - `SYNC_INTERFACE_DELETE` worker environment option (default `true`). Set it
   to `false` so interface sync deletes no interface: neither one with `?` in
   its name nor an uncabled port-like interface (`ethN`, `SFP N`, `(PoE…)`)
-  that UniFi no longer lists. With `cleanup_enabled`, cleanup still deletes
-  interfaces with `?` in their name and those of the stale devices it removes.
+  that UniFi no longer lists. Cleanup, when it runs, still deletes interfaces
+  with `?` in their name and those of the stale devices it removes.
 
 ### Fixed
 

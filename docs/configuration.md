@@ -317,7 +317,8 @@ entered by hand with such a name is deleted too. `SYNC_INTERFACE_DELETE` is a
 worker-process environment option, default `true`. Set it to `false` in the
 environment of every process that executes sync, then restart workers, so
 interface sync deletes no interface. Interfaces are still created and updated.
-The option does not cover cleanup: with `cleanup_enabled`, cleanup still
+The option does not cover cleanup: when cleanup runs (a scheduled run with
+`cleanup_enabled`, the dashboard's cleanup box or `--cleanup`), it still
 deletes interfaces with `?` in their name, and the interfaces of the stale
 devices it removes.
 
