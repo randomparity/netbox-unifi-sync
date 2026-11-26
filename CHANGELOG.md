@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `SYNC_OFFLINE_CABLE_DELETE` worker environment option (default `true`). Set
+  it to `false` to keep the cables of a device that UniFi reports offline,
+  instead of removing those that do not end on a front or rear port.
+
 ### Fixed
 
 - Release each sync worker thread's Django database connections when its task

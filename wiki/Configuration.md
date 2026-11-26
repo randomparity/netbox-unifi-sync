@@ -73,5 +73,9 @@ readings such as uptime, PoE draw, utilization and client signal/timestamps. It
 has no Settings UI field. Restart workers after changing their environment.
 Runtime/prefix locks are process-local; avoid overlapping independent jobs.
 
+`SYNC_OFFLINE_CABLE_DELETE=false` in the worker environment keeps the cables
+of devices that UniFi reports offline (default: removed unless they end on a
+front or rear port).
+
 See [Upgrade](Upgrade) and the
 [full configuration reference](https://github.com/unifi2netbox/netbox-unifi-sync/blob/main/docs/configuration.md).

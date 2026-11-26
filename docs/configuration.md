@@ -308,6 +308,16 @@ identity, firmware, MAC, IP and SSID information continues to sync. Existing
 custom-field values can remain unchanged; description fields may be rewritten
 without live readings. See [device specs](device-specs.md).
 
+## Advanced: cables of offline devices
+
+When UniFi reports a device offline, the sync removes the cables on its
+interfaces, except a cable that ends on a front or rear port. A device that is
+switched off or unreachable for a while loses cables that were entered by
+hand, and they are not recreated unless UniFi reports the uplink again.
+`SYNC_OFFLINE_CABLE_DELETE` is a worker-process environment option, default
+`true`. Set it to `false` in the environment of every process that executes
+sync, then restart workers, to leave an offline device's cables as they are.
+
 MFA seeds and API/password/token fields are redacted from configuration snapshots.
 Restrict controller edit permissions, database backups and secret-file access;
 redaction is not encryption of stored controller values.

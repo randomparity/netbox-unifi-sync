@@ -770,6 +770,8 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     # Check if device is offline — remove cables and skip
     device_state = (device.get("state") or device.get("status") or "").upper()
     if device_state in ("OFFLINE", "DISCONNECTED", "0"):
+        if not _sync_option("SYNC_OFFLINE_CABLE_DELETE", default=True):
+            return
         # Remove cables from this device's interfaces, but only if the cable
         # does NOT connect to a Front Port or Rear Port on the other end
         # (those are patch-panel connections managed manually).
