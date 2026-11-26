@@ -8,7 +8,8 @@ All notable changes to this project are documented in this file.
 
 - `SYNC_CABLES_STRICT` worker environment option (default `false`). Set it to
   `true` to make an uplink cable only when UniFi names the port at both ends
-  and both exist in NetBox, instead of guessing a missing port.
+  and both exist in NetBox, instead of guessing a missing port. An access
+  point with no wired interface then gets no auto-created `eth0` uplink.
 
 ### Fixed
 

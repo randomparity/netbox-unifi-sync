@@ -318,7 +318,8 @@ guessed cable can join the wrong ports. `SYNC_CABLES_STRICT` is a
 worker-process environment option, default `false`. Set it to `true` in the
 environment of every process that executes sync, then restart workers, to make
 a cable only when UniFi names both ports and both exist; the uplink is then
-left uncabled. Existing cables are not changed.
+left uncabled. Existing cables are not changed. An access point with no wired
+interface then gets no `eth0` ("Uplink (auto-created)") for its uplink.
 
 MFA seeds and API/password/token fields are redacted from configuration snapshots.
 Restrict controller edit permissions, database backups and secret-file access;
