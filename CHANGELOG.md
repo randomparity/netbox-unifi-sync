@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `SYNC_CABLES_STRICT` worker environment option (default `false`). Set it to
+  `true` to make an uplink cable only when UniFi names the port at both ends
+  and both exist in NetBox, instead of guessing a missing port.
+
 ### Fixed
 
 - Release each sync worker thread's Django database connections when its task

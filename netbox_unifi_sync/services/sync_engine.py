@@ -801,7 +801,9 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     upstream_device_id = uplink.get("deviceId") or uplink.get("device_id")
     upstream_mac = uplink.get("uplink_mac") or uplink.get("mac") or uplink.get("macAddress")
     uplink_port_name = uplink.get("name") or uplink.get("uplink_port") or uplink.get("port_name") or uplink.get("portName")
-    upstream_port_name = uplink.get("uplink_remote_port") or uplink.get("remotePort") or uplink.get("port_name")
+    upstream_port_name = uplink.get("uplink_remote_port") or uplink.get("remotePort")
+    if not upstream_port_name and not _sync_option("SYNC_CABLES_STRICT", default=False):
+        upstream_port_name = uplink.get("port_name")
 
     if not upstream_device_id and not upstream_mac:
         logger.debug(f"Cable sync for {device_name}: no upstream deviceId or MAC in uplink data")
@@ -832,7 +834,8 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     our_iface = None
     if uplink_port_name:
         our_iface = nb.dcim.interfaces.get(device_id=nb_device.id, name=uplink_port_name)
-    if not our_iface:
+    strict = _sync_option("SYNC_CABLES_STRICT", default=False)
+    if not our_iface and not strict:
         # Try to find any interface marked as uplink
         all_ifaces = list(nb.dcim.interfaces.filter(device_id=nb_device.id))
         # Filter to only cabled (ethernet/physical) interfaces — exclude wireless types
@@ -895,7 +898,7 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
                 upstream_iface = iface
                 break
     # Fallback: any unconnected physical port
-    if not upstream_iface:
+    if not upstream_iface and not strict:
         for iface in upstream_ifaces:
             if not iface.cable and iface.type and str(iface.type) not in ("virtual", "lag"):
                 upstream_iface = iface

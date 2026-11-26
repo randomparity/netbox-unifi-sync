@@ -308,6 +308,18 @@ identity, firmware, MAC, IP and SSID information continues to sync. Existing
 custom-field values can remain unchanged; description fields may be rewritten
 without live readings. See [device specs](device-specs.md).
 
+## Advanced: strict uplink cables
+
+When UniFi does not name a port of an uplink, cable sync guesses it: on the
+device, an interface described as an uplink or else the last physical port;
+on the upstream device, the first free physical port. Where no remote port is
+named, it takes the local port's name (`port_name`) for the remote one. A
+guessed cable can join the wrong ports. `SYNC_CABLES_STRICT` is a
+worker-process environment option, default `false`. Set it to `true` in the
+environment of every process that executes sync, then restart workers, to make
+a cable only when UniFi names both ports and both exist; the uplink is then
+left uncabled. Existing cables are not changed.
+
 MFA seeds and API/password/token fields are redacted from configuration snapshots.
 Restrict controller edit permissions, database backups and secret-file access;
 redaction is not encryption of stored controller values.
