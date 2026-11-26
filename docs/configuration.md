@@ -315,8 +315,11 @@ and uncabled interfaces named like UniFi ports (`ethN`, `SFP N`, or with
 `(PoE` in the name) that UniFi no longer lists for the device. An interface
 entered by hand with such a name is deleted too. `SYNC_INTERFACE_DELETE` is a
 worker-process environment option, default `true`. Set it to `false` in the
-environment of every process that executes sync, then restart workers, to
-delete no interface. Interfaces are still created and updated.
+environment of every process that executes sync, then restart workers, so
+interface sync deletes no interface. Interfaces are still created and updated.
+The option does not cover cleanup: with `cleanup_enabled`, cleanup still
+deletes interfaces with `?` in their name, and the interfaces of the stale
+devices it removes.
 
 MFA seeds and API/password/token fields are redacted from configuration snapshots.
 Restrict controller edit permissions, database backups and secret-file access;
