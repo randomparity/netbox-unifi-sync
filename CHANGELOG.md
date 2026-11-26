@@ -11,6 +11,9 @@ All notable changes to this project are documented in this file.
   5.1.2), worker threads kept their connections, the pool ran dry, lookups timed
   out after 30 s and were reported as not found, and a sync took minutes
   (#35).
+- Save an interface's primary MAC address through the interface, so the
+  change is written to the change log. It was set with a queryset update,
+  which sends no signals: the change log, and a NetBox branch, missed it.
 
 ## [0.3.27] - 2026-10-31
 

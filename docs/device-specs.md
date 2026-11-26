@@ -97,7 +97,8 @@ plugin stores native NetBox interface fields when available:
 - enabled state
 - speed
 - PoE mode
-- primary MAC address
+- primary MAC address (saved through the interface, so the change is
+  change-logged)
 
 Additional UniFi-only operational details are added to the NetBox interface
 description so they are visible without requiring custom fields:
