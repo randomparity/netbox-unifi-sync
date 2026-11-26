@@ -2517,6 +2517,19 @@ _device_type_specs_done = set()
 _port_models = set()
 _device_type_specs_lock = threading.Lock()
 
+
+def _lists_ports(device):
+    interfaces = device.get("interfaces")
+    if isinstance(interfaces, list) and "ports" in interfaces:
+        return True
+    return bool(normalize_port_data(device) or normalize_port_data(device, "legacy"))
+
+
+def _note_port_models(devices):
+    if _sync_option("SYNC_INTERFACES"):
+        _port_models.update(d.get("model") for d in devices if _lists_ports(d))
+
+
 # ---------------------------------------------------------------------------
 #  Community device-type library (netbox-community/devicetype-library)
 # ---------------------------------------------------------------------------
@@ -2788,18 +2801,6 @@ def find_device_type(nb, manufacturer, model):
             if hit:
                 return hit, str(hit.model) != model
     return nb.dcim.device_types.get(model=model, manufacturer_id=manufacturer.id), False
-
-
-def _lists_ports(device):
-    interfaces = device.get("interfaces")
-    if isinstance(interfaces, list) and "ports" in interfaces:
-        return True
-    return bool(normalize_port_data(device) or normalize_port_data(device, "legacy"))
-
-
-def _note_port_models(devices):
-    if _sync_option("SYNC_INTERFACES"):
-        _port_models.update(d.get("model") for d in devices if _lists_ports(d))
 
 
 def ensure_device_type_specs(nb, nb_device_type, model):

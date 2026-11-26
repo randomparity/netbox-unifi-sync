@@ -11,11 +11,11 @@ All notable changes to this project are documented in this file.
   5.1.2), worker threads kept their connections, the pool ran dry, lookups timed
   out after 30 s and were reported as not found, and a sync took minutes
   (#35).
-- Make no interface templates for a device model whose ports UniFi lists. A
-  new device got one interface per template and then UniFi's ports; where the
-  names differed, such as `Port 1 (PoE++)` and `Port 1`, every port existed
-  twice. Templates already on a type stay, and models without listed ports
-  still get them.
+- Make no interface templates for a device model whose ports UniFi lists for
+  any device of the site being synced. A new device got one interface per
+  template and then UniFi's ports; where the names differed, such as
+  `Port 1 (PoE++)` and `Port 1`, every port existed twice. Templates already on
+  a type stay, and models without listed ports still get them.
 
 ## [0.3.27] - 2026-10-31
 
