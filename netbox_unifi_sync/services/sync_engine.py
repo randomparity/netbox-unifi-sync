@@ -1608,9 +1608,6 @@ def sync_client_ips(nb, site_obj, nb_site, tenant):
             nb_ip = nb.ipam.ip_addresses.get(address=ip_with_mask)
             if nb_ip:
                 needs_update = False
-                if getattr(nb_ip, "description", None) != description:
-                    nb_ip.description = description
-                    needs_update = True
                 if interface:
                     cur_id = getattr(nb_ip, "assigned_object_id", None)
                     assigned_object_type = _assignment_object_type(interface)
@@ -1618,11 +1615,16 @@ def sync_client_ips(nb, site_obj, nb_site, tenant):
                     moved = cur_type != assigned_object_type or str(cur_id or "") != str(interface.id)
                     owner = getattr(interface, "device_id", None)
                     if moved and _held_by_other(nb, nb_ip, owner):
+                        # Not relabelled either: a client IP's cleanup could delete it later.
                         logger.warning(f"Kept IP {ip_with_mask} where it is, not on client {mac_norm}")
-                    elif moved:
+                        continue
+                    if moved:
                         nb_ip.assigned_object_type = assigned_object_type
                         nb_ip.assigned_object_id = interface.id
                         needs_update = True
+                if getattr(nb_ip, "description", None) != description:
+                    nb_ip.description = description
+                    needs_update = True
                 cur_tags = [t.id for t in (nb_ip.tags or [])]
                 if client_tag.id not in cur_tags:
                     nb_ip.tags = cur_tags + [client_tag.id]

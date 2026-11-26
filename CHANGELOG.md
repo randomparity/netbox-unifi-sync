@@ -11,12 +11,16 @@ All notable changes to this project are documented in this file.
   5.1.2), worker threads kept their connections, the pool ran dry, lookups timed
   out after 30 s and were reported as not found, and a sync took minutes
   (#35).
-- Leave an IP address where it is when gateway, device or client IP sync would
-  move it from another device, where it is that device's primary or
-  out-of-band IP, or from a virtual machine, and log `Kept IP ...` as a
-  warning. NetBox refuses that move only when it validates; the ORM made it,
-  leaving a device whose primary IP was assigned elsewhere. The gateway's
-  fallback no longer takes such an address as its own primary IP.
+- Leave an IP address where it is when gateway or client IP sync would move it
+  from another device whose primary or out-of-band IP it is, or from a virtual
+  machine interface, and log `Kept IP ...` as a warning. NetBox refuses that
+  move only when it validates; the ORM made it, leaving a device whose primary
+  IP was assigned elsewhere. Device IP sync already left an address on another
+  device's interface; it now also leaves one on a virtual machine interface,
+  and an unassigned one that is another device's primary or out-of-band IP.
+  The gateway's fallback no longer takes such an address as its own primary
+  IP, and client IP sync does not relabel a kept address as a client IP, so
+  the client-IP cleanup cannot delete it later.
 
 ## [0.3.27] - 2026-10-31
 

@@ -42,3 +42,54 @@ def test_the_gateways_own_address_moves():
     ip, gateway = _run({"primary_ip4_id": [SimpleNamespace(id=1)]})
     assert ip.assigned_object_id == 80
     assert gateway.primary_ip4 == 5
+
+
+def test_the_gateways_fallback_takes_no_other_devices_address(monkeypatch):
+    ip = SimpleNamespace(id=5, assigned_object_type="dcim.interface", assigned_object_id=70)
+    nb = Mock()
+    nb.ipam.ip_addresses.get.return_value = ip
+    nb.dcim.devices.filter.side_effect = lambda **k: (
+        [SimpleNamespace(id=2)] if "primary_ip4_id" in k else [])
+    monkeypatch.setattr(engine, "_get_matching_prefixes",
+                        lambda nb, ip: [SimpleNamespace(prefix="198.51.100.0/30")])
+    gateway = SimpleNamespace(id=1, primary_ip4=None, save=Mock())
+    # Only a VPN network, which makes no interface, so the fallback runs.
+    nets = [{"name": "vpn", "purpose": "remote-user-vpn", "ip_subnet": "203.0.113.1/24"}]
+    site = SimpleNamespace(network_conf=SimpleNamespace(all=lambda: nets))
+    engine.sync_gateway_interfaces(
+        nb, gateway, {"name": "gw", "ipAddress": "198.51.100.2"}, site, SimpleNamespace(id=1), None)
+    assert gateway.primary_ip4 is None
+    gateway.save.assert_not_called()
+
+
+def _client_run(monkeypatch, holders):
+    monkeypatch.setenv("SYNC_CLIENT_IPS", "true")
+    tag = SimpleNamespace(id=3)
+    monkeypatch.setattr(engine, "ensure_tag", lambda *args, **kwargs: tag)
+    monkeypatch.setattr(engine, "_get_matching_prefixes",
+                        lambda nb, ip: [SimpleNamespace(prefix="198.51.100.0/24")])
+    interface = SimpleNamespace(id=80, device_id=9)
+    monkeypatch.setattr(engine, "_lookup_interface_by_mac", lambda nb, mac: interface)
+    ip = SimpleNamespace(id=5, description="typed", assigned_object_type="dcim.interface",
+                         assigned_object_id=70, tags=[], save=Mock())
+    nb = Mock()
+    nb.ipam.ip_addresses.get.return_value = ip
+    nb.dcim.devices.filter.side_effect = lambda **k: holders.get(next(iter(k)), [])
+    client = {"mac": "02:00:00:00:00:09", "ip": "198.51.100.7", "hostname": "client"}
+    site = SimpleNamespace(client=SimpleNamespace(all=lambda: [client]))
+    engine.sync_client_ips(nb, site, SimpleNamespace(name="S"), SimpleNamespace(id=1))
+    return ip
+
+
+def test_a_client_does_not_take_or_relabel_another_devices_address(monkeypatch, caplog):
+    ip = _client_run(monkeypatch, {"primary_ip4_id": [SimpleNamespace(id=2)]})
+    assert (ip.assigned_object_id, ip.description, ip.tags) == (70, "typed", [])
+    ip.save.assert_not_called()
+    assert "Kept IP 198.51.100.7/24" in caplog.text
+
+
+def test_a_client_takes_a_free_address(monkeypatch):
+    ip = _client_run(monkeypatch, {})
+    assert ip.assigned_object_id == 80
+    assert ip.tags == [3]
+    ip.save.assert_called_once()

@@ -101,7 +101,8 @@ MAC address exists on that interface. Integration API field names such as
 Gateway, device and client IP sync never move an existing IP address that is
 another device's primary or out-of-band IP, or that is assigned to a virtual
 machine interface. They leave it where it is and log `Kept IP ...` as a
-warning, on every run until the address or UniFi's data changes.
+warning, on every run until the address or UniFi's data changes. Client IP
+sync leaves such an address's description and tags alone too.
 
 ### IPAM and DHCP
 
