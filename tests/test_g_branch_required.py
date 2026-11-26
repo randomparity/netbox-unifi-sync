@@ -238,7 +238,9 @@ def held(branching, monkeypatch):
     django_db.transaction = SimpleNamespace(atomic=atomic)
     django_db.connections = {**django_db.connections, "default": holder,
                              "schema_branch_x": branch_connection}
+    replicated = ["dcim_device", "dcim_interface"]
     for name, module in {
+        "netbox_branching.utilities": SimpleNamespace(get_tables_to_replicate=lambda: replicated),
         "django.db.backends": SimpleNamespace(),
         "django.db.backends.signals": SimpleNamespace(connection_created=created),
         "psycopg": SimpleNamespace(),
@@ -246,7 +248,7 @@ def held(branching, monkeypatch):
     }.items():
         monkeypatch.setitem(sys.modules, name, module)
     return SimpleNamespace(holder=holder, connection=branch_connection, created=created,
-                           state=branching)
+                           state=branching, replicated=replicated)
 
 
 def run_statement(connection, sql="SELECT 1"):
@@ -443,3 +445,14 @@ def test_a_branch_table_dropped_during_the_run_fails_it(held):
         with branch_guard.hold_branch():
             held.holder.tables.remove("dcim_interface")
     assert any("pg_tables" in sql for sql in held.holder.sql)
+
+
+@pytest.mark.parametrize("missing", ["dcim_interface", "core_objectchange"])
+def test_a_branch_without_a_table_it_should_have_is_refused(held, missing):
+    """A missing table resolves to main's, as in a branch not migrated after an upgrade."""
+    held.holder.tables.remove(missing)
+    with pytest.raises(BranchRequiredError, match=rf"lacks \['{missing}'\]"):
+        with branch_guard.hold_branch():
+            pytest.fail("ran")
+    assert held.holder.closed
+    assert held.connection.execute_wrappers == []

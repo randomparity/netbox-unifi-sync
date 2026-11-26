@@ -194,6 +194,10 @@ by hand is not locked: statements on it reach main's table until the run ends, a
 fails because the table is gone. A killed run's locks end with its connections. The engine's
 inventory adapter refuses all access outside a run.
 
+A run is also refused before it writes anything if the branch's schema lacks a table that
+netbox-branching copies to a branch, such as one added by an upgrade that the branch was not
+migrated for: statements on a missing table would reach main's.
+
 ### Safe settings
 
 A sync, dry runs included, is refused with any of these on: `schedule_enabled`,

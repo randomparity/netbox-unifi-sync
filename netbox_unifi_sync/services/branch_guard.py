@@ -11,8 +11,11 @@ branch's schema is gone. So a run holds the branch:
   locks a table of the branch's schema. If the schema is gone, the statement is not run; while
   the transaction holds that lock, the schema cannot be dropped. This holds even for a drop of the
   schema that bypasses the receivers, and if the advisory lock's connection is lost.
-- A single table of the branch dropped by hand is not locked: until the run ends, statements on it
-  reach main's table. So a run fails if any table the branch had at its start is gone at its end.
+- A table missing from the branch's schema resolves to main's. So a run is refused before it
+  writes anything unless the schema has every table netbox-branching copies to a branch, as after
+  an upgrade that the branch was not migrated for. A single table dropped by hand during the run is
+  not locked: until the run ends, statements on it reach main's table, so a run fails if any table
+  the branch had at its start is gone at its end.
 
 Anything that goes wrong after the start makes the run fail when it ends. A killed run's
 connections close, and PostgreSQL releases its locks.
@@ -169,6 +172,16 @@ class _Hold:
                 )
                 return {row[0] for row in cursor.fetchall()}
 
+    def require_tables(self) -> None:
+        from netbox_branching.utilities import get_tables_to_replicate
+
+        missing = sorted({*get_tables_to_replicate(), "core_objectchange"} - self.tables)
+        if missing:
+            raise BranchRequiredError(
+                f"Sync refused: branch {self.branch.name!r} lacks {missing}, which would be read and "
+                "written in main. Migrate the branch, or make a new one."
+            )
+
     def verify(self) -> None:
         if self.lost:
             raise BranchLostError(f"Sync failed: {self.lost}")
@@ -232,11 +245,12 @@ def hold_branch():
     hold = _Hold(branch)
     hold.acquire()
     try:
+        hold.tables = hold.branch_tables()
+        hold.require_tables()
         _install_wrappers(hold.alias)
         token = _held.set(hold)
         try:
             require_active_branch()
-            hold.tables = hold.branch_tables()
             yield hold
             hold.verify()
         finally:
