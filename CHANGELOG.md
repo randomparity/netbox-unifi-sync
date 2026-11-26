@@ -12,7 +12,7 @@ All notable changes to this project are documented in this file.
   out after 30 s and were reported as not found, and a sync took minutes
   (#35).
 - Make no interface templates for a device model whose ports UniFi lists for
-  any device of the site being synced. A new device got one interface per
+  any device at a site synced so far in the run. A new device got one interface per
   template and then UniFi's ports; where the names differed, such as
   `Port 1 (PoE++)` and `Port 1`, every port existed twice. Templates already on
   a type stay, and models without listed ports still get them.
