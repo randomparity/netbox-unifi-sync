@@ -11,10 +11,13 @@ All notable changes to this project are documented in this file.
   5.1.2), worker threads kept their connections, the pool ran dry, lookups timed
   out after 30 s and were reported as not found, and a sync took minutes
   (#35).
-- Link wireless LANs to interfaces through `Interface.wireless_lans`, the side
-  of the relation that NetBox change-logs. The sync set
-  `WirelessLAN.interfaces`, so link changes had no change log entry, and the
-  links were passed when creating a wireless LAN, where they are not a field.
+- Create a wireless LAN whose broadcasting access points are known. Its
+  interfaces were passed to the create, where they are the reverse side of a
+  relation: the create raised `TypeError` and the sync logged
+  `Could not create wireless LAN`. Links are now set through
+  `Interface.wireless_lans` after the create, and when they change on an
+  existing wireless LAN, so NetBox change-logs them; setting
+  `WirelessLAN.interfaces` left no change log entry.
 
 ## [0.3.27] - 2026-10-31
 
