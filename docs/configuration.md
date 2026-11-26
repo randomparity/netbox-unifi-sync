@@ -308,6 +308,18 @@ identity, firmware, MAC, IP and SSID information continues to sync. Existing
 custom-field values can remain unchanged; description fields may be rewritten
 without live readings. See [device specs](device-specs.md).
 
+## Advanced: keep existing records
+
+A device that the sync matches by serial takes UniFi's name, device type and
+role, and an existing VLAN takes UniFi's network name and a status from whether
+that network is enabled. Where these are curated in NetBox, each sync overwrites
+them. `SYNC_KEEP_EXISTING` is a worker-process environment option, default
+`false`. Set it to `true` in the environment of every process that executes
+sync, then restart workers, to set these fields only when the sync creates the
+device or VLAN. A VLAN whose network is later disabled in UniFi then keeps its
+status. Everything else, such as interfaces, IP addresses and custom fields,
+still syncs.
+
 MFA seeds and API/password/token fields are redacted from configuration snapshots.
 Restrict controller edit permissions, database backups and secret-file access;
 redaction is not encryption of stored controller values.

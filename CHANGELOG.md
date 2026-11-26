@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `SYNC_KEEP_EXISTING` worker environment option (default `false`). Set it to
+  `true` to keep the name, device type and role of a device that NetBox already
+  has, and the name and status of an existing VLAN, so the sync sets them only
+  when it creates the record.
+
 ### Fixed
 
 - Release each sync worker thread's Django database connections when its task

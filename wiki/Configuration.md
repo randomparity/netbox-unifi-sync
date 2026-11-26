@@ -73,5 +73,9 @@ readings such as uptime, PoE draw, utilization and client signal/timestamps. It
 has no Settings UI field. Restart workers after changing their environment.
 Runtime/prefix locks are process-local; avoid overlapping independent jobs.
 
+`SYNC_KEEP_EXISTING=true` in the worker environment keeps the name, type and
+role of existing devices and the name and status of existing VLANs; the sync
+sets them only on create (default: off).
+
 See [Upgrade](Upgrade) and the
 [full configuration reference](https://github.com/unifi2netbox/netbox-unifi-sync/blob/main/docs/configuration.md).

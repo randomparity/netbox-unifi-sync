@@ -936,6 +936,10 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
             logger.warning(f"Could not create cable for {device_name}: {e}")
 
 
+def _keep_existing():
+    return _sync_option("SYNC_KEEP_EXISTING", default=False)
+
+
 def sync_site_vlans(nb, site_obj, nb_site, tenant):
     """Sync VLANs from UniFi network configs to NetBox."""
     try:
@@ -1022,6 +1026,9 @@ def sync_site_vlans(nb, site_obj, nb_site, tenant):
             # Update name and/or status if changed
             desired_status = "active" if enabled else "reserved"
             current_status = existing.status.value if hasattr(existing.status, "value") else str(existing.status)
+            if _keep_existing():
+                net_name = existing.name
+                desired_status = current_status
             changed = existing.name != net_name or current_status != desired_status
             if changed:
                 try:
@@ -3010,7 +3017,7 @@ def process_device(unifi, nb, site, device, nb_ubiquity, tenant, unifi_device_ip
         if nb_device:
             logger.info(f"Device {device_name} with serial {device_serial} already exists. Checking IP...")
             # Update device name if changed in UniFi
-            if nb_device.name != device_name:
+            if nb_device.name != device_name and not _keep_existing():
                 old_name = nb_device.name
                 nb_device.name = device_name
                 try:
@@ -3024,7 +3031,7 @@ def process_device(unifi, nb, site, device, nb_ubiquity, tenant, unifi_device_ip
                     nb_device.save()
             # Update device type if model changed
             current_type_id = nb_device.device_type.id if nb_device.device_type else None
-            if nb_device_type and current_type_id != nb_device_type.id:
+            if nb_device_type and current_type_id != nb_device_type.id and not _keep_existing():
                 nb_device.device_type = nb_device_type.id
                 try:
                     nb_device.save()
@@ -3033,7 +3040,7 @@ def process_device(unifi, nb, site, device, nb_ubiquity, tenant, unifi_device_ip
                     logger.warning(f"Failed to update device type for {device_name}: {e}")
             # Update role if it has changed (e.g. feature detection improved)
             current_role_id = nb_device.role.id if nb_device.role else None
-            if nb_device_role and current_role_id != nb_device_role.id:
+            if nb_device_role and current_role_id != nb_device_role.id and not _keep_existing():
                 nb_device.role_id = nb_device_role.id
                 try:
                     nb_device.save()
