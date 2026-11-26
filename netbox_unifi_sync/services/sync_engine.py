@@ -2221,6 +2221,9 @@ def sync_device_interfaces(nb, nb_device, device, api_style="integration", unifi
                 except pynetbox.core.query.RequestError as e:
                     logger.warning(f"Failed to create radio {iface_name} on {device_name}: {e}")
 
+    if not _sync_option("SYNC_INTERFACE_DELETE", default=True):
+        return
+
     # Clean up interfaces with '?' in name (leftover from previous runs with missing data)
     for iface_name, iface_obj in existing_interfaces.items():
         if "?" in iface_name:

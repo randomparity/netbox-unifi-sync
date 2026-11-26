@@ -73,5 +73,8 @@ readings such as uptime, PoE draw, utilization and client signal/timestamps. It
 has no Settings UI field. Restart workers after changing their environment.
 Runtime/prefix locks are process-local; avoid overlapping independent jobs.
 
+`SYNC_INTERFACE_DELETE=false` in the worker environment stops the sync
+deleting interfaces that UniFi no longer lists (default: deleted).
+
 See [Upgrade](Upgrade) and the
 [full configuration reference](https://github.com/unifi2netbox/netbox-unifi-sync/blob/main/docs/configuration.md).

@@ -308,6 +308,16 @@ identity, firmware, MAC, IP and SSID information continues to sync. Existing
 custom-field values can remain unchanged; description fields may be rewritten
 without live readings. See [device specs](device-specs.md).
 
+## Advanced: interface deletion
+
+During interface sync, the plugin deletes interfaces with `?` in their name,
+and uncabled interfaces named like UniFi ports (`ethN`, `SFP N`, or with
+`(PoE` in the name) that UniFi no longer lists for the device. An interface
+entered by hand with such a name is deleted too. `SYNC_INTERFACE_DELETE` is a
+worker-process environment option, default `true`. Set it to `false` in the
+environment of every process that executes sync, then restart workers, to
+delete no interface. Interfaces are still created and updated.
+
 MFA seeds and API/password/token fields are redacted from configuration snapshots.
 Restrict controller edit permissions, database backups and secret-file access;
 redaction is not encryption of stored controller values.
