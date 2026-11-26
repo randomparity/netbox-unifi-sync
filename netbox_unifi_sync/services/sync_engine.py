@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextvars
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 from slugify import slugify
@@ -2835,7 +2835,7 @@ def _ensure_device_type_specs_inner(nb, nb_device_type, model, specs):
                 nb_device_type.weight = w
                 nb_device_type.weight_unit = specs.get("weight_unit", "kg")
                 changed = True
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidOperation):
             pass
     # Add PoE budget as comment if available
     poe = specs.get("poe_budget", 0)
@@ -2974,7 +2974,7 @@ def process_device(unifi, nb, site, device, nb_ubiquity, tenant, unifi_device_ip
                     try:
                         create_data["weight"] = _spec_weight(specs["weight"])
                         create_data["weight_unit"] = specs.get("weight_unit", "kg")
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError, InvalidOperation):
                         pass
             try:
                 nb_device_type = nb.dcim.device_types.create(create_data)

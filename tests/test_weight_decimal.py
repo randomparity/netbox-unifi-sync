@@ -31,3 +31,11 @@ def test_another_weight_is_written_as_a_decimal(monkeypatch):
     kind = _sync(None, monkeypatch)
     kind.save.assert_called_once()
     assert isinstance(kind.weight, Decimal)
+
+
+@pytest.mark.parametrize("weight", ["abc", "", "inf"])
+def test_a_malformed_weight_is_skipped(weight, monkeypatch):
+    monkeypatch.setattr(engine, "_sync_templates", lambda *args: None)
+    kind = SimpleNamespace(id=1, part_number="", comments="", weight=None, save=Mock())
+    engine._ensure_device_type_specs_inner(Mock(), kind, "X", {"weight": weight})
+    assert kind.weight is None
