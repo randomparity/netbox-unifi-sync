@@ -87,6 +87,11 @@ templates. Normal device sync skips enrichment for a curated type selected by
 its SKU/library identity. The cleanup type-refresh pass is separate and can
 refresh matching specs or delete unused types; review it before enabling cleanup.
 
+Interface templates are not created for a model when UniFi lists ports for any
+of its devices in the run and `sync_interfaces` is on: those ports are synced
+under UniFi's names, so templates would give each new device every port twice.
+Existing templates are left alone.
+
 ## Runtime Port Metadata
 
 Device type templates describe what a model can have. Runtime UniFi port data
