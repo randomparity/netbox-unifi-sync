@@ -39,3 +39,37 @@ def test_a_malformed_weight_is_skipped(weight, monkeypatch):
     kind = SimpleNamespace(id=1, part_number="", comments="", weight=None, save=Mock())
     engine._ensure_device_type_specs_inner(Mock(), kind, "X", {"weight": weight})
     assert kind.weight is None
+
+
+def _create_type(weight, monkeypatch):
+    """Sync a device of a model that has no device type yet; return the type's create payload."""
+    role = SimpleNamespace(id=1, name="Switch")
+    for name, value in {
+        "select_netbox_role_for_device": lambda d: (role, "LAN"),
+        "get_vrf_for_site": lambda *a: (None, None),
+        "_resolve_device_specs": lambda m: {"weight": weight, "part_number": "P"},
+        "find_device_type": lambda *a: (None, False),
+        "ensure_device_type_specs": Mock(),
+        "ensure_tag": lambda *a, **k: None,
+        "sync_device_interfaces": Mock(),
+    }.items():
+        monkeypatch.setattr(engine, name, value)
+    monkeypatch.setenv("SYNC_DEVICE_CUSTOM_FIELDS", "false")
+    monkeypatch.setenv("SYNC_PRIMARY_IPS", "false")
+    nb = Mock()
+    nb.dcim.devices.get.return_value = None
+    engine.process_device(Mock(), nb, SimpleNamespace(id=3, name="S"),
+                          {"name": "sw", "serial": "SERIAL1", "model": "M"},
+                          SimpleNamespace(id=1, name="Ubiquiti"), SimpleNamespace(id=1))
+    return nb.dcim.device_types.create.call_args.args[0]
+
+
+@pytest.mark.parametrize("weight", ["abc", "", "inf"])
+def test_a_new_type_skips_a_malformed_weight(weight, monkeypatch):
+    payload = _create_type(weight, monkeypatch)
+    assert payload["part_number"] == "P"
+    assert "weight" not in payload
+
+
+def test_a_new_type_gets_a_two_decimal_weight(monkeypatch):
+    assert _create_type(5.1, monkeypatch)["weight"] == Decimal("5.10")
