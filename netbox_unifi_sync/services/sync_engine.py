@@ -957,22 +957,8 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
         logger.debug(f"Cable sync for {device_name}: no suitable uplink interface found on device (port_name={uplink_port_name})")
         return
 
-    # Check if cable already exists on this interface
+    # A cabled end is left as it is, whatever the cable joins.
     if our_iface.cable:
-        # If the existing cable connects to a front/rear port (patch panel),
-        # leave it alone — it was placed manually.
-        try:
-            existing_cable = nb.dcim.cables.get(
-                our_iface.cable.id if hasattr(our_iface.cable, "id") else our_iface.cable
-            )
-            if existing_cable and _cable_touches_patch_port(existing_cable):
-                logger.debug(
-                    f"Cable sync for {device_name}: skipping {our_iface.name} "
-                    f"— existing cable connects to a front/rear port (patch panel)"
-                )
-                return
-        except Exception as exc:
-            logger.debug("Cable patch-port check failed for %s/%s: %s", device_name, our_iface.name, exc)
         logger.debug(f"Cable sync for {device_name}: cable already exists on {our_iface.name}")
         return
 
@@ -982,7 +968,7 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     # Prefer matching the remote port name from uplink data
     if upstream_port_name:
         for iface in upstream_ifaces:
-            if iface.name == upstream_port_name and not iface.cable:
+            if iface.name == upstream_port_name:
                 upstream_iface = iface
                 break
     # Fallback: any unconnected physical port
@@ -996,21 +982,7 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
         logger.debug(f"Cable sync for {device_name}: no available interface on upstream device {upstream_nb.name} (upstream_port={upstream_port_name})")
         return
 
-    # Final guard: if the upstream interface acquired a cable between our
-    # lookup and now (race) AND it connects to a patch port, skip.
     if upstream_iface.cable:
-        try:
-            existing = nb.dcim.cables.get(
-                upstream_iface.cable.id if hasattr(upstream_iface.cable, "id") else upstream_iface.cable
-            )
-            if existing and _cable_touches_patch_port(existing):
-                logger.debug(
-                    f"Cable sync for {device_name}: upstream {upstream_nb.name}:{upstream_iface.name} "
-                    f"connects to a front/rear port — skipping"
-                )
-                return
-        except Exception as exc:
-            logger.debug("Cable patch-port check failed for upstream %s/%s: %s", upstream_nb.name, upstream_iface.name, exc)
         logger.debug(f"Cable sync for {device_name}: upstream {upstream_nb.name}:{upstream_iface.name} already has a cable — skipping")
         return
 
