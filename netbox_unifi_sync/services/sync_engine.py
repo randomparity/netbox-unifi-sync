@@ -774,7 +774,7 @@ def _legacy_uplinks(legacy_devices):
     found = {}
     for legacy in legacy_devices or []:
         uplink = legacy.get("uplink") if isinstance(legacy, dict) else None
-        if not isinstance(uplink, dict) or uplink.get("type", "wire") != "wire":
+        if not isinstance(uplink, dict) or uplink.get("type") != "wire":
             continue
         try:
             local, remote = int(uplink["port_idx"]), int(uplink["uplink_remote_port"])
@@ -790,7 +790,7 @@ def _legacy_uplinks(legacy_devices):
 def _attach_legacy_uplinks(unifi, site_obj, devices, legacy=None):
     """Give each device of an Integration API site its Legacy API uplink, when there is one."""
     if legacy is None:
-        if getattr(unifi, "api_style", None) != "integration":
+        if getattr(unifi, "api_style", None) != "integration" or not _sync_option("SYNC_INTERFACES"):
             return
         listed = _fetch_legacy_devices(unifi, site_obj)
         if listed is None:
@@ -886,10 +886,12 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     upstream_port_name = uplink.get("uplink_remote_port") or uplink.get("remotePort")
     if not upstream_port_name and not _sync_option("SYNC_CABLES_STRICT", default=True):
         upstream_port_name = uplink.get("port_name")
-    if not (uplink_port_name and upstream_port_name):
+    if not uplink_port_name and not upstream_port_name:
+        # Only when the Integration API named neither end: a cable never mixes the two sources.
         legacy = _legacy_port_names(device)
         if legacy:
             uplink_port_name, upstream_mac, upstream_port_name = legacy
+            upstream_device_id = None
 
     if not upstream_device_id and not upstream_mac:
         logger.debug(f"Cable sync for {device_name}: no upstream deviceId or MAC in uplink data")

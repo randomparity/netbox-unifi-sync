@@ -220,10 +220,12 @@ The Integration API's uplink names no ports, so with strict cables it makes no c
 read through the Integration API, the sync also reads the legacy device list (`stat/device`) once,
 with the same key. A device whose legacy uplink is wired and gives both port numbers is cabled
 between the interfaces the sync made for those port numbers, on the device and on its upstream
-device, found by MAC. The interface names are the ones interface sync gave the ports in the same
-run, never names the legacy API reports. With no such interface at either end, an end already
-cabled, or the legacy list unreadable (one warning), no cable is made. Uplink names given by the
-Integration API take precedence. No cable is changed or deleted.
+device, found by the legacy uplink's MAC only. The interface names are the ones interface sync gave
+the ports in the same run, never names the legacy API reports. With no such interface at either
+end, an end already cabled, or the legacy list unreadable (one warning), no cable is made. The
+legacy port numbers are used only when the Integration API names neither end; one named end is
+left to the Integration API alone. Without interface sync the list is not read. No cable is changed
+or deleted.
 
 ### Console certificate
 

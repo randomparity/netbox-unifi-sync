@@ -161,10 +161,8 @@ def test_a_cable_between_the_interfaces_the_sync_made(monkeypatch):
     assert _cable(monkeypatch) == (11, 23)
 
 
-def test_a_legacy_port_table_name_does_not_redirect_the_cable(monkeypatch):
-    # The legacy list names local port 8 "Port 8"; the sync named it "Uplink". The cable lands on
-    # "Uplink", and with no interface of the engine's name there is no cable.
-    assert _cable(monkeypatch) == (11, 23)
+def test_no_cable_when_the_engines_interface_is_missing(monkeypatch):
+    # Only an interface named as the legacy list names the port exists: no cable.
     assert _cable(monkeypatch, local=("Port 8", None)) is None
 
 
@@ -207,3 +205,75 @@ def test_no_names_unless_the_sync_named_both_ends(names):
     engine._port_names["02000000000B"] = {} if names else {3: "Port 3"}
     device = {"mac": SWITCH, "_legacy_uplink": (8, "02000000000B", 3)}
     assert engine._legacy_port_names(device) is None
+
+
+# --- review: one-end names, the upstream device, the type, string indexes ---------------------
+
+@pytest.mark.parametrize("integration", [
+    {"deviceId": "u2", "name": "Uplink"},
+    {"deviceId": "u2", "uplink_remote_port": "Port 3"},
+])
+def test_an_integration_name_for_one_end_is_not_replaced(monkeypatch, integration):
+    # Strict: the Integration API named one end only, so no cable is made from mixed sources.
+    assert _cable(monkeypatch, integration=integration) is None
+
+
+def test_the_upstream_device_is_the_legacy_one_or_none(monkeypatch):
+    engine._port_names["02000000000A"] = {8: "Uplink"}
+    engine._port_names["02000000000B"] = {3: "Port 3"}
+    other = SimpleNamespace(id=2, name="other")
+    nb = Mock()
+    nb.dcim.interfaces.get.side_effect = lambda device_id, name: SimpleNamespace(
+        id=10 * device_id, name=name, type="1000base-t", cable=None, description="")
+    nb.dcim.interfaces.filter.side_effect = lambda device_id: [
+        SimpleNamespace(id=10 * device_id, name="Port 3", type="1000base-t", cable=None)]
+    device = {"name": "sw", "mac": SWITCH, "state": "ONLINE", "uplink": {"deviceId": "u2"},
+              "_legacy_uplink": (8, "02000000000B", 3)}
+    # The legacy upstream MAC is not known; the Integration device ID names another device.
+    engine.sync_uplink_cable(nb, SimpleNamespace(id=1), device, {"u2": other})
+    nb.dcim.cables.create.assert_not_called()
+
+
+@pytest.mark.parametrize("uplink", [{k: v for k, v in WIRE.items() if k != "type"}])
+def test_an_uplink_that_does_not_say_wire_is_skipped(uplink):
+    assert engine._legacy_uplinks([_legacy(SWITCH, uplink)]) == {}
+
+
+def test_port_numbers_given_as_text_are_used():
+    uplink = {**WIRE, "port_idx": "8", "uplink_remote_port": "3"}
+    assert engine._legacy_uplinks([_legacy(SWITCH, uplink)])["02000000000A"] == (8, "02000000000B", 3)
+
+
+def test_an_integration_port_index_given_as_text_is_kept(monkeypatch):
+    monkeypatch.setenv("SYNC_INTERFACE_DELETE", "false")
+    _sync_ports(monkeypatch, SWITCH, [{"idx": "8", "name": "Uplink"}])
+    assert engine._port_names["02000000000A"] == {8: "Uplink"}
+
+
+def test_a_legacy_port_name_never_redirects_the_cable(monkeypatch):
+    # The legacy list names local port 8 "Port 8"; interface sync named it "Uplink".
+    legacy = [{"mac": SWITCH, "uplink": WIRE, "port_table": [{"port_idx": 8, "name": "Port 8"}]}]
+    monkeypatch.setattr(engine, "_fetch_legacy_devices", Mock(return_value=legacy))
+    engine._port_names["02000000000A"] = {8: "Uplink"}
+    engine._port_names["02000000000B"] = {3: "Port 3"}
+    device = {"name": "sw", "mac": SWITCH, "state": "ONLINE", "uplink": {}}
+    engine._attach_legacy_uplinks(SimpleNamespace(api_style="integration"), SimpleNamespace(), [device])
+    ports = {1: [SimpleNamespace(id=11, name="Uplink", type="1000base-t", cable=None, description=""),
+                 SimpleNamespace(id=18, name="Port 8", type="1000base-t", cable=None, description="")],
+             2: [SimpleNamespace(id=23, name="Port 3", type="1000base-t", cable=None, description="")]}
+    nb = Mock()
+    nb.dcim.interfaces.filter.side_effect = lambda device_id: ports[device_id]
+    nb.dcim.interfaces.get.side_effect = lambda device_id, name: next(
+        (p for p in ports[device_id] if p.name == name), None)
+    engine.sync_uplink_cable(nb, SimpleNamespace(id=1), device,
+                             {"02000000000B": SimpleNamespace(id=2, name="up")})
+    payload = nb.dcim.cables.create.call_args.args[0]
+    assert payload["a_terminations"][0]["object_id"] == 11
+
+
+def test_no_legacy_list_is_read_without_interface_sync(monkeypatch):
+    monkeypatch.setenv("SYNC_INTERFACES", "false")
+    fetch = Mock(return_value=[])
+    monkeypatch.setattr(engine, "_fetch_legacy_devices", fetch)
+    engine._attach_legacy_uplinks(SimpleNamespace(api_style="integration"), SimpleNamespace(), [{}])
+    fetch.assert_not_called()
