@@ -77,8 +77,7 @@ def _parse_env_dhcp_ranges():
     return networks
 
 
-def _fetch_legacy_networkconf(unifi, site_obj):
-    """Fetch network configs via Legacy API (has DHCP fields)."""
+def _legacy_site_url(unifi, site_obj, path):
     site_code = (
         getattr(site_obj, "internal_reference", None)
         or getattr(site_obj, "name", None)
@@ -89,7 +88,44 @@ def _fetch_legacy_networkconf(unifi, site_obj):
         base = base.split("/proxy/network/integration")[0]
     elif "/integration/" in base:
         base = base.split("/integration/")[0]
-    url = f"{base}/proxy/network/api/s/{site_code}/rest/networkconf"
+    return f"{base}/proxy/network/api/s/{site_code}/{path}"
+
+
+def _fetch_legacy_devices(unifi, site_obj):
+    """Fetch the site's devices via the Legacy API, whose uplinks carry both port numbers.
+
+    Returns None when the list cannot be read.
+    """
+    url = _legacy_site_url(unifi, site_obj, "stat/device")
+    try:
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        headers.update(getattr(unifi, "integration_auth_headers", None) or {})
+        resp = unifi.session.get(
+            url,
+            headers=headers,
+            verify=getattr(unifi, "verify_ssl", _unifi_verify_ssl()),
+            timeout=unifi.request_timeout,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, dict) and isinstance(data.get("data"), list):
+                return data["data"]
+            if isinstance(data, list):
+                return data
+        logger.debug(f"Legacy device list returned HTTP {resp.status_code}")
+    except Exception as e:
+        logger.debug(f"Legacy device list could not be read: {e}")
+    return None
+
+
+def _fetch_legacy_networkconf(unifi, site_obj):
+    """Fetch network configs via Legacy API (has DHCP fields)."""
+    site_code = (
+        getattr(site_obj, "internal_reference", None)
+        or getattr(site_obj, "name", None)
+        or "default"
+    )
+    url = _legacy_site_url(unifi, site_obj, "rest/networkconf")
 
     try:
         headers = {"Content-Type": "application/json", "Accept": "application/json"}

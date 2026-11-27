@@ -214,6 +214,17 @@ its safe value.
 With `SYNC_KEEP_EXISTING`, the name and status of a VLAN that exists are kept, also when UniFi
 disables its network.
 
+### Uplink cables from the legacy API
+
+The Integration API's uplink names no ports, so with strict cables it makes no cable. For a site
+read through the Integration API, the sync also reads the legacy device list (`stat/device`) once,
+with the same key. A device whose legacy uplink is wired and gives both port numbers is cabled
+between the interfaces the sync made for those port numbers, on the device and on its upstream
+device, found by MAC. The interface names are the ones interface sync gave the ports in the same
+run, never names the legacy API reports. With no such interface at either end, an end already
+cabled, or the legacy list unreadable (one warning), no cable is made. Uplink names given by the
+Integration API take precedence. No cable is changed or deleted.
+
 ### Console certificate
 
 Each controller has `cert_sha256`, the SHA-256 fingerprint of its console's certificate, as 64 hex

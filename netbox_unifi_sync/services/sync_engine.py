@@ -20,6 +20,7 @@ from .sync import vrf as vrf_helpers
 from .sync.netbox_orm import build_netbox_orm_client
 from .sync.ipam import (
     _get_network_info_for_ip,
+    _fetch_legacy_devices,
     _fetch_legacy_networkconf,
     extract_dhcp_pools_from_unifi,
     find_available_static_ip,
@@ -740,6 +741,82 @@ def sync_device_custom_fields(nb, nb_device, device):
         logger.debug(f"Updated custom fields for {nb_device.name}")
 
 
+# The name the sync gave each port, by device MAC and port index, so that a cable from the legacy
+# API's port numbers lands on the interface the sync made, whatever the legacy API calls the port.
+_port_names = {}
+_port_names_lock = threading.Lock()
+
+
+def _mac_key(mac):
+    """A MAC address without case or separators, as device serials are kept."""
+    return str(mac or "").upper().replace(":", "").replace("-", "").replace(".", "")
+
+
+def _note_port_names(device, ports):
+    key = _mac_key(device.get("mac") or device.get("macAddress"))
+    if not key:
+        return
+    names = {}
+    for port in ports:
+        try:
+            names[int(port["index"])] = port["name"]
+        except (KeyError, TypeError, ValueError):
+            continue
+    with _port_names_lock:
+        _port_names[key] = names
+
+
+def _legacy_uplinks(legacy_devices):
+    """Map each device's MAC to its wired uplink: (local port, upstream MAC, remote port).
+
+    Only uplinks for which the Legacy API gives both port numbers are kept.
+    """
+    found = {}
+    for legacy in legacy_devices or []:
+        uplink = legacy.get("uplink") if isinstance(legacy, dict) else None
+        if not isinstance(uplink, dict) or uplink.get("type", "wire") != "wire":
+            continue
+        try:
+            local, remote = int(uplink["port_idx"]), int(uplink["uplink_remote_port"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        upstream = _mac_key(uplink.get("uplink_mac"))
+        mac = _mac_key(legacy.get("mac"))
+        if mac and upstream:
+            found[mac] = (local, upstream, remote)
+    return found
+
+
+def _attach_legacy_uplinks(unifi, site_obj, devices, legacy=None):
+    """Give each device of an Integration API site its Legacy API uplink, when there is one."""
+    if legacy is None:
+        if getattr(unifi, "api_style", None) != "integration":
+            return
+        listed = _fetch_legacy_devices(unifi, site_obj)
+        if listed is None:
+            logger.warning("Could not read the legacy device list; no cable is made from it.")
+            return
+        legacy = _legacy_uplinks(listed)
+    for device in devices:
+        uplink = legacy.get(_mac_key(device.get("mac") or device.get("macAddress")))
+        if uplink:
+            device["_legacy_uplink"] = uplink
+
+
+def _legacy_port_names(device):
+    """The names the sync gave both ends of the device's legacy uplink, or None."""
+    uplink = device.get("_legacy_uplink")
+    if not uplink:
+        return None
+    local, upstream, remote = uplink
+    with _port_names_lock:
+        local_name = _port_names.get(_mac_key(device.get("mac") or device.get("macAddress")), {}).get(local)
+        remote_name = _port_names.get(upstream, {}).get(remote)
+    if local_name and remote_name:
+        return local_name, upstream, remote_name
+    return None
+
+
 def _cable_touches_patch_port(cable_obj) -> bool:
     """Return True if either end of *cable_obj* terminates on a Front Port or
     Rear Port.  Those are patch-panel connections that are managed manually and
@@ -809,6 +886,10 @@ def sync_uplink_cable(nb, nb_device, device, all_nb_devices_by_mac):
     upstream_port_name = uplink.get("uplink_remote_port") or uplink.get("remotePort")
     if not upstream_port_name and not _sync_option("SYNC_CABLES_STRICT", default=True):
         upstream_port_name = uplink.get("port_name")
+    if not (uplink_port_name and upstream_port_name):
+        legacy = _legacy_port_names(device)
+        if legacy:
+            uplink_port_name, upstream_mac, upstream_port_name = legacy
 
     if not upstream_device_id and not upstream_mac:
         logger.debug(f"Cable sync for {device_name}: no upstream deviceId or MAC in uplink data")
@@ -1933,7 +2014,8 @@ def normalize_port_data(device, api_style="integration"):
 
     for port in raw_ports:
         if api_style == "integration":
-            name = port.get("name") or f"Port {port.get('portIdx') or port.get('idx', '?')}"
+            index = port.get("portIdx") or port.get("idx")
+            name = port.get("name") or f"Port {index if index is not None else '?'}"
             speed_mbps = port.get("maxSpeed") or port.get("maxSpeedMbps") or port.get("speed") or port.get("speedMbps") or 0
             enabled = (
                 port.get("enabled", True) if "enabled" in port
@@ -1944,7 +2026,8 @@ def normalize_port_data(device, api_style="integration"):
             mac = port.get("macAddress") or port.get("mac")
             is_uplink = port.get("isUplink", False)
         else:
-            name = port.get("name") or f"Port {port.get('port_idx', '?')}"
+            index = port.get("port_idx")
+            name = port.get("name") or f"Port {index if index is not None else '?'}"
             speed_mbps = port.get("speed") or 0
             enabled = port.get("up", True)
             poe = _first_port_value(port, "poe_mode", "poeMode", "poe")
@@ -1966,6 +2049,7 @@ def normalize_port_data(device, api_style="integration"):
 
         ports.append({
             "name": name,
+            "index": index,
             "type": nb_type,
             "speed_kbps": speed_kbps,
             "enabled": bool(enabled),
@@ -2149,6 +2233,7 @@ def sync_device_interfaces(nb, nb_device, device, api_style="integration", unifi
 
     # --- Physical Ports ---
     ports = normalize_port_data(device, api_style)
+    _note_port_names(device, ports)
     for port in ports:
         iface_name = port["name"]
         existing = existing_interfaces.get(iface_name)
@@ -3578,6 +3663,8 @@ def process_site(unifi, nb, site_obj, site_display_name, nb_site, nb_ubiquity, t
                                         if detail_uplink and isinstance(detail_uplink, dict):
                                             device["_detail_uplink"] = detail_uplink
 
+                    _attach_legacy_uplinks(unifi, site_obj, devices)
+
                     for device in devices:
                         device_serial = get_device_serial(device)
                         if not device_serial:
@@ -4038,6 +4125,8 @@ def _build_netbox_context(config):
 def _clear_run_state():
     _device_type_specs_done.clear()
     _port_models.clear()
+    with _port_names_lock:
+        _port_names.clear()
     _cleanup_serials_by_site.clear()
     _assigned_static_ips.clear()
     _unifi_dhcp_ranges.clear()

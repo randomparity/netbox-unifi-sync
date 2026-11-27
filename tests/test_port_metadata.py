@@ -33,6 +33,7 @@ def test_normalize_integration_port_enriches_description_with_profile_vlan_and_p
     assert ports == [
         {
             "name": "Port 1",
+            "index": None,
             "type": "2.5gbase-t",
             "speed_kbps": 2500000,
             "enabled": True,
